@@ -19,6 +19,17 @@ import env  # noqa: E402,F401  (loads .env)
 from insights import analyse, fmt_t, load  # noqa: E402
 import proficiency  # noqa: E402
 import skill_profile  # noqa: E402
+import attention  # noqa: E402
+import baseline_drift  # noqa: E402
+import collab_score  # noqa: E402
+import digital_twin  # noqa: E402
+import knowledge_graph  # noqa: E402
+import memory  # noqa: E402
+import root_cause  # noqa: E402
+import safety  # noqa: E402
+import search as factory_search  # noqa: E402
+import shift_summary  # noqa: E402
+import sop  # noqa: E402
 
 MODEL = "claude-opus-5-5"
 GROQ_MODEL = "openai/gpt-oss-120b"
@@ -114,6 +125,41 @@ class Context:
                          "evidence": [e for f in s["features"] for e in f["evidence"]][:3]})
         rows.sort(key=lambda x: -x["expertise_index"])
         return rows
+
+    # ---------------------------------------------------------------------- USPs 7-20
+    def sop_compliance(self, clip_id, expected_steps, mandatory=None):
+        return sop.check(clip_id, expected_steps, mandatory)
+
+    def attention_heatmap(self, clip_id):
+        return attention.heatmap(clip_id)
+
+    def search_clips(self, query):
+        return factory_search.search(query, self.clip_ids)
+
+    def digital_twin(self, clip_id, shift_start=None):
+        return digital_twin.narrate(clip_id, shift_start)
+
+    def safety_risk(self, clip_id=None):
+        clips = [clip_id] if clip_id else self.clip_ids
+        return [safety.predict(c) for c in clips]
+
+    def collaboration_score(self):
+        return collab_score.shift_score(self.clip_ids)
+
+    def behavior_drift(self, clip_id):
+        return baseline_drift.drift(clip_id)
+
+    def root_cause_analysis(self):
+        return root_cause.analyse(self.clip_ids)
+
+    def knowledge_graph_query(self, question):
+        return knowledge_graph.query(question, self.clip_ids)
+
+    def already_done(self, label):
+        return memory.already_done(label, self.clip_ids)
+
+    def shift_summary(self):
+        return shift_summary.summarize(self.clip_ids)
 
 
 # --------------------------------------------------------------------------- rules engine
@@ -215,6 +261,64 @@ def answer_rules(q, ctx):
             out.append(f"- **{x['title']}**: ~{x['saving_min_per_shift']} min/shift. "
                        + (cite(ev["clip_id"], ev["t"]) if ev else ""))
         return "\n".join(out)
+    if any(w in ql for w in ("shift report", "shift summary", "end of shift", "today's shift")):
+        s = ctx.shift_summary()
+        return s["narrative"]
+    if any(w in ql for w in ("root cause", "fixture", "defect")):
+        causes = ctx.root_cause_analysis()
+        if not causes:
+            return "No clustered friction pattern matches a known root cause in the selected clips."
+        out = []
+        for f in causes[:3]:
+            out.append(f"- {f['step_label']} ({f['clip_id']}): {f['root_cause']} Fix: {f['fix']} "
+                       + " ".join(f["evidence"]))
+        return "\n".join(out)
+    if any(w in ql for w in ("drift", "deviate significantly", "behaviour chang", "behavior chang",
+                             "slower today", "faster today")):
+        clip = next((c for c in ctx.clip_ids if c in q), ctx.clip_ids[-1])
+        d = ctx.behavior_drift(clip)
+        reasons = "; ".join(d.get("possible_reasons", []))
+        return d["headline"] + (f" Possible reasons: {reasons}." if reasons else "")
+    if any(w in ql for w in ("attention", "heatmap", "looking at", "where was he looking", "gaze")):
+        clip = next((c for c in ctx.clip_ids if c in q), ctx.clip_ids[-1])
+        hm = ctx.attention_heatmap(clip)
+        parts = ", ".join(f"{k} {v}%" for k, v in sorted(hm["pct"].items(), key=lambda kv: -kv[1]) if v > 0)
+        return f"Attention breakdown for {clip}: {parts}. Not detected: {', '.join(hm['not_detected'])}."
+    if any(w in ql for w in ("safety", "unsafe", "hazard", "risk of injury")):
+        rows = ctx.safety_risk()
+        configured = [r for r in rows if r["configured"]]
+        if not configured:
+            return "No unsafe zone is configured for any selected station, so safety risk can't be measured yet."
+        forecasts = [f for r in configured for f in r["forecasts"]]
+        if not forecasts:
+            return "No repeated unsafe reaches detected in the selected clips."
+        f = forecasts[0]
+        return f["note"] + f" {f['cite']}"
+    if "tool" in ql and "delay" in ql:
+        return ctx.knowledge_graph_query(q)["answer"]
+    if "delay" in ql and ("task" in ql or "step" in ql or "causes" in ql):
+        return ctx.knowledge_graph_query(q)["answer"]
+    if any(w in ql for w in ("show clips where", "find every instance", "find clips", "search for")):
+        hits = ctx.search_clips(q)
+        if not hits["hits"]:
+            return "No matching clips/events found."
+        lines = [f"- {h['cite']}: {h['note']}" for h in hits["hits"][:8]]
+        out = f"{hits['count']} match(es):\n" + "\n".join(lines)
+        if hits["proxy_notes"]:
+            out += "\n" + "\n".join(hits["proxy_notes"])
+        return out
+    if "already" in ql and ("done" in ql or "completed" in ql or "finished" in ql):
+        m = (re.search(r"^(?:has|have|is|was|did)\s+(.+?)\s+(?:already\s+)?(?:been\s+)?"
+                       r"(?:done|completed|finished)\b", ql)
+             or re.search(r"(?:done|completed|finished)\s+(.+?)[?.]?$", ql))
+        label = m.group(1) if m else q
+        return ctx.already_done(label)["note"]
+    if any(w in ql for w in ("who blocks", "waiting time", "dependency", "communication")):
+        cs = ctx.collaboration_score()
+        return (f"{cs['total_collaboration_events']} collaboration events across the selected clips, "
+                f"{cs['total_waiting_s']:.0f}s total waiting on another person. "
+                + (f"Most waiting: {cs['clip_with_most_waiting']}." if cs["clip_with_most_waiting"] else "")
+                + f" {cs['note']}")
     if any(w in ql for w in ("why", "ineffici", "waste", "lost", "breakdown", "summary", "how")):
         b = r["breakdown_pct"]
         parts = ", ".join(f"{LABELS.get(k, k)} {v}%" for k, v in sorted(b.items(), key=lambda kv: -kv[1]))
@@ -225,7 +329,9 @@ def answer_rules(q, ctx):
                    f"{cite(top['evidence'][0]['clip_id'], top['evidence'][0]['t'])}." if top and top["evidence"] else ""))
     return ("I answer from the event timeline. Try: \"Where was time lost?\", "
             "\"Which recommendation has the highest ROI?\", \"Did the workflow deviate from baseline?\", "
-            "\"When did collaboration occur?\", \"Which step took the longest?\"")
+            "\"When did collaboration occur?\", \"Which step took the longest?\", \"Give me the shift summary\", "
+            "\"What's the likely root cause?\", \"Did behaviour drift today?\", \"Which task causes the most "
+            "delay?\"")
 
 
 # --------------------------------------------------------------------------- claude engine
@@ -250,6 +356,57 @@ TOOLS = [
      "repeated grasps, motion entropy, idle time, looking around. Index 50 = the station's typical motion. "
      "Describes the motion in a recording, never a person. Omit clip_id for all selected recordings.",
      "input_schema": {"type": "object", "properties": {"clip_id": {"type": ["string", "null"]}}}},
+    {"name": "check_sop_compliance", "description": "Compare one clip's detected steps against a written SOP "
+     "(an ordered list of expected step names). Reports missing steps, out-of-order steps, extra steps, and "
+     "any skipped mandatory step (e.g. an inspection).",
+     "input_schema": {"type": "object", "properties": {
+         "clip_id": {"type": "string"}, "expected_steps": {"type": "array", "items": {"type": "string"}},
+         "mandatory": {"type": ["array", "null"], "items": {"type": "string"}}},
+         "required": ["clip_id", "expected_steps"]}},
+    {"name": "get_attention_heatmap", "description": "Share of time the head-mounted camera pointed at the "
+     "machine/work, each tool-search zone, a colleague (collaboration signal), or was idle/away. No phone "
+     "zone: there is no object detector for one in this stack.",
+     "input_schema": {"type": "object", "properties": {"clip_id": {"type": "string"}}, "required": ["clip_id"]}},
+    {"name": "search_clips", "description": "Natural-language search over all selected clips' steps and "
+     "friction events, returning timestamped hits. Keyword-routed, not a trained NLP model; queries with no "
+     "real detector behind them (e.g. 'dropped', 'asked for help') return the closest measured proxy and say "
+     "so in proxy_notes.",
+     "input_schema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}},
+    {"name": "get_digital_twin", "description": "A chronological, narrated timeline for one clip (steps, "
+     "conversations, idle spells) -- a digital-twin view of the station's activity. shift_start ('HH:MM') "
+     "adds wall-clock labels; omit it to keep relative mm:ss only.",
+     "input_schema": {"type": "object", "properties": {
+         "clip_id": {"type": "string"}, "shift_start": {"type": ["string", "null"]}}, "required": ["clip_id"]}},
+    {"name": "get_safety_risk", "description": "Unsafe-reach events and a frequency-based forecast of another "
+     "one soon, for stations with an unsafe zone configured. Returns 'configured': false (and no events) for "
+     "a station nobody has configured a danger zone for -- that is not the same as 'safe'.",
+     "input_schema": {"type": "object", "properties": {"clip_id": {"type": ["string", "null"]}}}},
+    {"name": "get_collaboration_score", "description": "Help frequency, waiting time, dependency and "
+     "communication share, aggregated from collaboration events across the selected clips. Never ranks a "
+     "worker; scores recordings, since Kairo tracks no worker identity.",
+     "input_schema": {"type": "object", "properties": {}}},
+    {"name": "get_behavior_drift", "description": "Compares one clip with its OWN station's recent history "
+     "(self baseline, not a cross-worker ranking). Flags a significant change and, if one exists, which "
+     "friction type grew the most, with plausible (never asserted) reasons.",
+     "input_schema": {"type": "object", "properties": {"clip_id": {"type": "string"}}, "required": ["clip_id"]}},
+    {"name": "get_root_cause_analysis", "description": "Matches clustered friction patterns (e.g. repeated "
+     "re-grasps + extra reach on one step) to a plausible mechanical root cause and fix, with evidence cites. "
+     "Deterministic rules, not an LLM guess.",
+     "input_schema": {"type": "object", "properties": {}}},
+    {"name": "query_knowledge_graph", "description": "Ask which task or friction type causes the highest "
+     "measured delay across the selected clips. A 'tool' question returns a message saying no tool detector "
+     "exists yet, rather than an invented number.",
+     "input_schema": {"type": "object", "properties": {"question": {"type": "string"}},
+      "required": ["question"]}},
+    {"name": "check_already_done", "description": "Was a step matching this label already completed earlier "
+     "in the selected clips (treated as one shift, in the given order)? Guards against re-reporting the same "
+     "completed work.",
+     "input_schema": {"type": "object", "properties": {"label": {"type": "string"}}, "required": ["label"]}},
+    {"name": "get_shift_summary", "description": "An end-of-shift report: clips processed, average active "
+     "work time, collaboration events, probable safety events, the most common friction, a root-cause "
+     "finding and the top recommendation. Says plainly when a section (quality deviations, safety) needs a "
+     "capability not yet configured for this site.",
+     "input_schema": {"type": "object", "properties": {}}},
 ]
 
 SYSTEM = """You are Kairo, a process-improvement copilot for factory egocentric video.
@@ -257,7 +414,10 @@ You evaluate the workstation and process, never the worker as a person: say "the
 the baseline", never "the worker is slow". Skill patterns describe the motion in a recording ("this
 recording shows expert-like motion"), never a person. Collaboration events come from agreeing signals; never claim
 what people said.
-Answer only from tool results. If the data does not contain the answer, say so.
+Answer only from tool results. If the data does not contain the answer, say so. There is no tool
+detector, phone detector or worker identity in this stack: if a tool result says a capability isn't
+configured or detected (e.g. no unsafe zone, no SOP template, no tool node), repeat that limitation
+instead of guessing a number.
 Every event, step and recommendation in the tool results has a "cite" string like
 [MTL-SGF00106-021@00:46]. When you mention a moment, paste its cite string exactly as given (plain
 ASCII square brackets and hyphens) - the UI turns it into a video link. Do not write times any other way.
@@ -278,6 +438,28 @@ def _run_tool(ctx, name, args):
         return ctx.proficiency(args.get("clip_id"))
     if name == "get_skill_profile":
         return ctx.skill(args.get("clip_id"))
+    if name == "check_sop_compliance":
+        return ctx.sop_compliance(args["clip_id"], args["expected_steps"], args.get("mandatory"))
+    if name == "get_attention_heatmap":
+        return ctx.attention_heatmap(args["clip_id"])
+    if name == "search_clips":
+        return ctx.search_clips(args["query"])
+    if name == "get_digital_twin":
+        return ctx.digital_twin(args["clip_id"], args.get("shift_start"))
+    if name == "get_safety_risk":
+        return ctx.safety_risk(args.get("clip_id"))
+    if name == "get_collaboration_score":
+        return ctx.collaboration_score()
+    if name == "get_behavior_drift":
+        return ctx.behavior_drift(args["clip_id"])
+    if name == "get_root_cause_analysis":
+        return ctx.root_cause_analysis()
+    if name == "query_knowledge_graph":
+        return ctx.knowledge_graph_query(args["question"])
+    if name == "check_already_done":
+        return ctx.already_done(args["label"])
+    if name == "get_shift_summary":
+        return ctx.shift_summary()
     return {"error": f"unknown tool {name}"}
 
 

@@ -26,3 +26,9 @@ PROFICIENCY_NEEDS_TRAINING = _f("KAIRO_PROF_NEEDS_TRAINING", 40.0)
 # --- collaboration (precision first) -----------------------------------------
 COLLAB_CONFIRMED = 0.90
 COLLAB_POSSIBLE = 0.60
+
+# --- safety (USP 13) ----------------------------------------------------------
+# station -> zones ("left"/"center"/"right") a site operator has flagged as hazardous for that
+# station. Empty by default: with no zone configured, no safety event is ever produced for that
+# station -- a fabricated danger zone is worse than silence.
+UNSAFE_ZONES = {}

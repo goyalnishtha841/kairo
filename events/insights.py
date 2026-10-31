@@ -20,6 +20,21 @@ import recommend  # noqa: E402
 
 RECOVERABLE = C.RECOVERABLE  # share of each friction type a fix can remove (stated on screen)
 
+# USP 9: human-readable reasons for the "why did productivity drop" question
+REASON_LABEL = {"search": "searching for tool", "transit": "walking away / fetching",
+                "idle": "idle / waiting (or talking)", "hesitation": "hesitation",
+                "extra_reach": "extra reach", "reattempt": "repeated movement (unnecessary corrections)"}
+
+
+def reasons(report):
+    """Friction seconds, ranked -- the breakdown behind "productivity dropped to 72%"."""
+    fr = report["friction"]
+    total = sum(v["seconds"] for v in fr.values()) or 1.0
+    rows = [{"type": k, "label": REASON_LABEL.get(k, k), "seconds": round(v["seconds"], 1), "count": v["count"],
+             "pct_of_lost": round(100 * v["seconds"] / total, 1)} for k, v in fr.items() if v["seconds"] > 0]
+    rows.sort(key=lambda r: -r["seconds"])
+    return rows
+
 
 def load(clip_id):
     return json.loads((OUT / clip_id / "timeline.json").read_text())
@@ -92,12 +107,19 @@ def analyse(clip_ids, shift_hours=8.0):
         "headline": headline,
         "roi_eur_per_year_total": sum(r["roi_eur_per_year"] for r in recs),
         "collaboration_events": collab,
+        "lost_time_reasons": [],  # filled below, after `report` exists (reasons() reads report["friction"])
         "assumptions": {"recoverable_fraction": RECOVERABLE,
                         "labor_eur_per_hour": C.LABOR_EUR_PER_HOUR, "shifts_per_day": C.SHIFTS_PER_DAY,
                         "workdays_per_year": C.WORKDAYS_PER_YEAR,
                         "note": "Shift figures are linear extrapolations from the observed footage. "
                                 "EUR per year = minutes per shift x labour rate x shifts per day x workdays."},
     }
+    report["lost_time_reasons"] = reasons(report)
+    if report["lost_time_reasons"]:
+        parts = ", ".join(f"{r['seconds']:.0f}s {r['label']}" for r in report["lost_time_reasons"][:4])
+        report["productivity_explanation"] = f"Lost time breakdown: {parts}."
+    else:
+        report["productivity_explanation"] = "No measurable friction in the selected clips."
     return report
 
 

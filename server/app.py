@@ -26,12 +26,23 @@ sys.path.insert(0, str(ROOT))
 for sub in ("events", "ai", "perception"):
     sys.path.insert(0, str(ROOT / sub))
 
+import attention  # noqa: E402
+import baseline_drift  # noqa: E402
+import collab_score  # noqa: E402
 import compare  # noqa: E402
 import copilot  # noqa: E402
+import digital_twin  # noqa: E402
 import insights  # noqa: E402
+import knowledge_graph  # noqa: E402
+import memory  # noqa: E402
 import proficiency  # noqa: E402
 import recommend  # noqa: E402
+import root_cause  # noqa: E402
+import safety  # noqa: E402
+import search as factory_search  # noqa: E402
+import shift_summary  # noqa: E402
 import skill_profile  # noqa: E402
+import sop  # noqa: E402
 import verify  # noqa: E402
 
 CLIP_ID_RE = re.compile(r"^[\w.-]{1,80}$")
@@ -165,6 +176,79 @@ def get_verification():
 def get_compare(ref: str, target: str):
     clip_dir(ref), clip_dir(target)
     return compare.compare(ref, target)
+
+
+# --------------------------------------------------------------------------- USPs 7-20
+class SopCheck(BaseModel):
+    clip_id: str
+    expected_steps: list[str]
+    mandatory: list[str] | None = None
+
+
+@app.post("/api/sop-compliance")
+def post_sop_compliance(body: SopCheck):
+    clip_dir(body.clip_id)
+    return sop.check(body.clip_id, body.expected_steps, body.mandatory)
+
+
+@app.get("/api/attention")
+def get_attention(clip: str):
+    clip_dir(clip)
+    return attention.heatmap(clip)
+
+
+class Search(BaseModel):
+    query: str
+    clips: list[str] = []
+
+
+@app.post("/api/search")
+def post_search(body: Search):
+    return factory_search.search(body.query, parse_clips(",".join(body.clips)))
+
+
+@app.get("/api/digital-twin")
+def get_digital_twin(clip: str, shift_start: str | None = None):
+    clip_dir(clip)
+    return digital_twin.narrate(clip, shift_start)
+
+
+@app.get("/api/safety")
+def get_safety(clip: str):
+    clip_dir(clip)
+    return safety.predict(clip)
+
+
+@app.get("/api/collaboration-score")
+def get_collaboration_score(clips: str = ""):
+    return collab_score.shift_score(parse_clips(clips))
+
+
+@app.get("/api/drift")
+def get_drift(clip: str):
+    clip_dir(clip)
+    return baseline_drift.drift(clip)
+
+
+@app.get("/api/root-cause")
+def get_root_cause(clips: str = ""):
+    return root_cause.analyse(parse_clips(clips))
+
+
+@app.get("/api/knowledge-graph")
+def get_knowledge_graph(question: str, clips: str = ""):
+    return knowledge_graph.query(question, parse_clips(clips))
+
+
+@app.get("/api/memory")
+def get_memory(label: str, clips: str = "", before_clip: str | None = None,
+               before_t: float | None = None):
+    return memory.already_done(label, parse_clips(clips), before_clip, before_t)
+
+
+@app.get("/api/shift-summary")
+def get_shift_summary(clips: str = "", shift_hours: float = 8.0):
+    return shift_summary.summarize(parse_clips(clips), shift_hours)
 
 
 # --------------------------------------------------------------------------- processing jobs
