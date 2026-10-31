@@ -105,6 +105,16 @@ body {
 .tbl-wrap { overflow-x: auto; }
 .tbl td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 
+/* skill profile */
+.skmap { width: 100%; max-height: 300px; display: block; }
+.skpt { cursor: pointer; }
+.skpt circle { transition: r .2s ease; }
+.sklegend { display: flex; gap: 10px; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
+.sklegend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+.sksum { margin-top: 16px; padding: 14px 16px; line-height: 1.5; }
+.sksim { display: flex; gap: 8px; flex-wrap: wrap; }
+.sksim .chip { cursor: pointer; color: var(--fg); font: inherit; font-size: 12px; }
+
 @media (max-width: 1100px) {
   .prof-top { grid-template-columns: 1fr; }
   .impact .hero { grid-template-columns: 1fr; }

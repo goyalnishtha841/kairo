@@ -31,6 +31,7 @@ import copilot  # noqa: E402
 import insights  # noqa: E402
 import proficiency  # noqa: E402
 import recommend  # noqa: E402
+import skill_profile  # noqa: E402
 
 CLIP_ID_RE = re.compile(r"^[\w.-]{1,80}$")
 
@@ -118,6 +119,15 @@ def get_proficiency(clip: str):
     res = proficiency.score(clip, cache)
     res["curve"] = proficiency.station_curve(res["station"], cache)
     return res
+
+
+@app.get("/api/skill")
+def get_skill(clip: str):
+    clip_dir(clip)
+    try:
+        return skill_profile.profile(clip)
+    except KeyError:
+        raise HTTPException(404, f"no skill profile for {clip}")
 
 
 @app.get("/api/simulate")

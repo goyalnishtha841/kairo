@@ -4,6 +4,7 @@ import Analyze from "./views/Analyze.jsx";
 import Sop from "./views/Sop.jsx";
 import Impact from "./views/Impact.jsx";
 import Proficiency from "./views/Proficiency.jsx";
+import Skill from "./views/Skill.jsx";
 import Report from "./views/Report.jsx";
 import Compare from "./views/Compare.jsx";
 import Clips from "./views/Clips.jsx";
@@ -12,6 +13,7 @@ const TABS = [
   ["analyze", "Analyze"],
   ["impact", "Impact"],
   ["proficiency", "Proficiency"],
+  ["skill", "Skill Profile"],
   ["sop", "SOP"],
   ["compare", "Compare"],
   ["report", "Shift Report"],
@@ -142,6 +144,7 @@ export default function App() {
         )}
         {tab === "impact" && report && <Impact report={report} seek={seek} />}
         {tab === "proficiency" && clip && <Proficiency clip={clip} seek={seek} setClip={setClip} />}
+        {tab === "skill" && clip && <Skill clip={clip} seek={seek} setClip={setClip} />}
         {tab === "sop" && timeline && <Sop clip={clip} timeline={timeline} seek={seek} />}
         {tab === "compare" && clips.length > 0 && <Compare clips={clips} seek={seek} />}
         {tab === "report" && report && <Report report={report} clips={clips} seek={seek} />}

@@ -18,6 +18,7 @@ sys.path.insert(0, str(ROOT / "ai"))
 import env  # noqa: E402,F401  (loads .env)
 from insights import analyse, fmt_t, load  # noqa: E402
 import proficiency  # noqa: E402
+import skill_profile  # noqa: E402
 
 MODEL = "claude-opus-5-5"
 GROQ_MODEL = "openai/gpt-oss-120b"
@@ -100,6 +101,20 @@ class Context:
         rows.sort(key=lambda x: x["score"] if x["score"] is not None else 100)
         return rows[:limit] if not clip_id else rows
 
+    def skill(self, clip_id=None):
+        """Motion skill pattern (expert-like / developing / beginner-like) per recording, learned without labels."""
+        cache = {}
+        clips = [clip_id] if clip_id else self.clip_ids
+        rows = []
+        for c in clips:
+            s = skill_profile.profile(c, cache)
+            rows.append({"clip_id": c, "station": s["station"], "pattern": s["pattern"],
+                         "expertise_index": s["expertise_index"], "confidence": s["confidence"],
+                         "reliability": s["reliability"], "summary": s["summary"],
+                         "evidence": [e for f in s["features"] for e in f["evidence"]][:3]})
+        rows.sort(key=lambda x: -x["expertise_index"])
+        return rows
+
 
 # --------------------------------------------------------------------------- rules engine
 def answer_rules(q, ctx):
@@ -128,8 +143,20 @@ def answer_rules(q, ctx):
                 f"{x['observation']} Evidence: {x['support']}"
                 + (f", e.g. {cite(ev['clip_id'], ev['t'])}." if ev else ".")
                 + f" Assumes EUR {r['assumptions']['labor_eur_per_hour']:g}/h; shift figures are extrapolated.")
-    if any(w in ql for w in ("baseline", "deviat", "proficien", "skill", "fingerprint", "normal", "expert",
-                             "novice")):
+    if any(w in ql for w in ("expert", "beginner", "novice", "motion", "smooth", "grasp", "cluster",
+                             "skill profil", "experienced")):
+        rows = ctx.skill()
+        groups = {}
+        for s in rows:
+            groups.setdefault(s["pattern"], []).append(s)
+        out = ["Motion skill patterns, learned without labels from how the hands move (compared within each "
+               "station; this describes the motion in a recording, not a person):"]
+        for pattern in skill_profile.PATTERNS[3]:
+            for s in groups.get(pattern, [])[:2 if len(ctx.clip_ids) > 3 else 9]:
+                out.append(f"- {s['clip_id']}: {s['pattern']} (index {s['expertise_index']}, "
+                           f"{s['reliability']} reliability). {s['summary']} {' '.join(s['evidence'][:2])}".rstrip())
+        return "\n".join(out)
+    if any(w in ql for w in ("baseline", "deviat", "proficien", "skill", "fingerprint", "normal")):
         rows = ctx.proficiency()
         out = ["Workflow scores against each station's baseline (50 = the station's typical workflow; "
                "this describes the recording, not a person):"]
@@ -216,11 +243,17 @@ TOOLS = [
     {"name": "get_proficiency", "description": "Workflow score (0-100, 50 = station baseline) with explained "
      "deviations and evidence cites. Omit clip_id for the recordings that deviate most. Describes workflows, "
      "never people.", "input_schema": {"type": "object", "properties": {"clip_id": {"type": ["string", "null"]}}}},
+    {"name": "get_skill_profile", "description": "Motion skill pattern per recording (Expert-like, Developing, "
+     "Beginner-like), clustered without labels from hand-motion features: smoothness, speed, corrections, "
+     "repeated grasps, motion entropy, idle time, looking around. Index 50 = the station's typical motion. "
+     "Describes the motion in a recording, never a person. Omit clip_id for all selected recordings.",
+     "input_schema": {"type": "object", "properties": {"clip_id": {"type": ["string", "null"]}}}},
 ]
 
 SYSTEM = """You are Kairo, a process-improvement copilot for factory egocentric video.
 You evaluate the workstation and process, never the worker as a person: say "the workflow deviates from
-the baseline", never "the worker is slow". Collaboration events come from agreeing signals; never claim
+the baseline", never "the worker is slow". Skill patterns describe the motion in a recording ("this
+recording shows expert-like motion"), never a person. Collaboration events come from agreeing signals; never claim
 what people said.
 Answer only from tool results. If the data does not contain the answer, say so.
 Every event, step and recommendation in the tool results has a "cite" string like
@@ -241,6 +274,8 @@ def _run_tool(ctx, name, args):
         return ctx.recommendations()
     if name == "get_proficiency":
         return ctx.proficiency(args.get("clip_id"))
+    if name == "get_skill_profile":
+        return ctx.skill(args.get("clip_id"))
     return {"error": f"unknown tool {name}"}
 
 

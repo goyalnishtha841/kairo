@@ -19,6 +19,7 @@ export const api = {
   raw: () => fetch("/api/raw").then(j),
   accuracy: () => fetch("/api/accuracy").then(j),
   proficiency: (clip) => fetch(`/api/proficiency?clip=${encodeURIComponent(clip)}`).then(j),
+  skill: (clip) => fetch(`/api/skill?clip=${encodeURIComponent(clip)}`).then(j),
   simulate: (clip, type) => fetch(`/api/simulate?clip=${encodeURIComponent(clip)}&friction_type=${type}`).then(j),
   process: (id) => fetch(`/api/process/${encodeURIComponent(id)}`, { method: "POST" }).then(j),
   upload: (file) => {
