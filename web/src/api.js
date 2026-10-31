@@ -41,6 +41,7 @@ export const LABEL = {
   idle: "Idle / waiting",
   hesitation: "Hesitation",
   extra_reach: "Extra reach",
+  reattempt: "Repeated correction",
   collaboration: "Collaboration",
   possible_collaboration: "Possible collaboration",
 };
@@ -52,6 +53,7 @@ export const COLOR = {
   idle: "var(--amber)",
   hesitation: "var(--amber)",
   extra_reach: "var(--amber)",
+  reattempt: "var(--amber)",
   collaboration: "var(--blue)",
   possible_collaboration: "var(--blue)",
 };
