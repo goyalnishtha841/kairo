@@ -5,8 +5,10 @@ const pct = (x) => (x == null ? "–" : `${Math.round(x * 100)}%`);
 
 function Accuracy({ acc }) {
   const rows = [
-    ["Precision", "drawn hands that really are the wearer's hand", "precision"],
-    ["Recall", "wearer's visible hands that were found", "recall"],
+    ["Precision (whole video)", "drawn hands that really are the wearer's hand", "precision_weighted"],
+    ["Recall (whole video)", "wearer's visible hands that were found", "recall_weighted"],
+    ["Precision (hard sample)", "on the 50/50 found / not-found sample", "precision"],
+    ["Recall (hard sample)", "the sample over-weights frames where hands were missed", "recall"],
     ["F1", "balance of the two", "f1"],
     ["Left / Right", "found hands with the correct side", "left_right_accuracy"],
     ["Frame presence", "frames where 'hands in view' is right", "frame_presence_accuracy"],

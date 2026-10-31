@@ -112,6 +112,27 @@ def score():
     }
     res["f1"] = (round(2 * res["precision"] * res["recall"] / (res["precision"] + res["recall"]), 3)
                  if res["precision"] and res["recall"] else None)
+
+    # The sample is half "tracker found hands" / half "found none", which over-represents misses.
+    # Re-weight each stratum by how often it really occurs in its clip (stratified estimator).
+    nat = {}
+    for c in {items[i]["clip_id"] for i in labels}:
+        fr = json.loads((OUT / c / "hands.json").read_text())["frames"]
+        nat[c] = sum(1 for f in fr if f["hands"]) / max(len(fr), 1)
+    k = {}
+    for i in labels:
+        key = (items[i]["clip_id"], bool(items[i]["tracked"]))
+        k[key] = k.get(key, 0) + 1
+    wd = wg = wc = 0.0
+    for i, lab in labels.items():
+        c, hit = items[i]["clip_id"], bool(items[i]["tracked"])
+        w = (nat[c] if hit else 1 - nat[c]) / k[(c, hit)]
+        wd += w * len(items[i]["tracked"])
+        wg += w * lab["gt"]
+        wc += w * lab["correct"]
+    res["precision_weighted"] = round(wc / wd, 3) if wd else None
+    res["recall_weighted"] = round(wc / wg, 3) if wg else None
+    res["note_weighted"] = "Weighted = each stratum re-weighted by its real share of frames in the clip (estimate for whole videos)."
     base = EVAL / "baseline_accuracy.json"
     if base.exists() and SET == "tune":
         res["baseline"] = {k: v for k, v in json.loads(base.read_text()).items()
