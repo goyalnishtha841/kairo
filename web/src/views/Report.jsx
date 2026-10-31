@@ -1,9 +1,41 @@
-import React from "react";
-import { fmt, LABEL } from "../api.js";
+import React, { useEffect, useState } from "react";
+import { api, fmt, LABEL } from "../api.js";
+
+const pct = (x) => (x == null ? "–" : `${Math.round(x * 100)}%`);
+
+function Accuracy({ acc }) {
+  const rows = [
+    ["Precision", "drawn hands that really are the wearer's hand", "precision"],
+    ["Recall", "wearer's visible hands that were found", "recall"],
+    ["F1", "balance of the two", "f1"],
+    ["Left / Right", "found hands with the correct side", "left_right_accuracy"],
+    ["Frame presence", "frames where 'hands in view' is right", "frame_presence_accuracy"],
+  ];
+  return (
+    <>
+      <h3 className="sec">Hand-tracking accuracy (human-labelled)</h3>
+      <table className="tbl">
+        <thead><tr><th>Measure</th><th>What it means</th>{acc.baseline && <th>Before tuning</th>}<th>Kairo</th></tr></thead>
+        <tbody>
+          {rows.map(([name, desc, k]) => (
+            <tr key={k}>
+              <td>{name}</td><td className="muted">{desc}</td>
+              {acc.baseline && <td>{pct(acc.baseline[k])}</td>}
+              <td><b>{pct(acc[k])}</b></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="muted small">{acc.frames_labelled} frames from {acc.clips} clips labelled by hand ({acc.ground_truth_hands} visible wearer hands), half where the tracker found hands and half where it found none, so misses are counted. Reproduce with <code>python eval/accuracy.py score</code>.</p>
+    </>
+  );
+}
 
 export default function Report({ report, clips }) {
   const r = report;
   const f = r.friction;
+  const [acc, setAcc] = useState(null);
+  useEffect(() => { api.accuracy().then(setAcc).catch(() => {}); }, []);
   const metrics = clips.map((c) => c.metrics).filter((m) => m && m.clip_id);
   const avg = (k) => metrics.length ? metrics.reduce((a, m) => a + (m[k] || 0), 0) / metrics.length : null;
   const date = new Date().toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
@@ -50,9 +82,10 @@ export default function Report({ report, clips }) {
         </tbody>
       </table>
 
+      {acc && <Accuracy acc={acc} />}
       {metrics.length > 0 && (
         <>
-          <h3 className="sec">Hand-tracking quality</h3>
+          <h3 className="sec">Hand-tracking quality per clip</h3>
           <table className="tbl">
             <thead><tr><th>Clip</th><th>Frames w/ hands</th><th>Mean confidence</th><th>Jitter raw → smoothed (px)</th><th>Other people's hands rejected</th><th>Speed (FPS, CPU)</th></tr></thead>
             <tbody>

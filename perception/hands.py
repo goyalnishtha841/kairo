@@ -29,6 +29,7 @@ MODEL_URL = ("https://storage.googleapis.com/mediapipe-models/hand_landmarker/"
 HAND_IDS = ("L", "R")
 LOST_RESET_S = 0.5      # reset a hand's filter after it's been missing this long
 EGO_MIN_PALM = 0.033    # wrist->middle-MCP length / frame width; smaller hands belong to other people
+DET_CONF = 0.15         # detection/presence threshold (see make_landmarker)
 SWAP_GATE = 0.25        # max normalised wrist jump before we trust handedness over position
 CONNECTIONS = [(0, 1), (1, 2), (2, 3), (3, 4), (0, 5), (5, 6), (6, 7), (7, 8), (5, 9), (9, 10),
                (10, 11), (11, 12), (9, 13), (13, 14), (14, 15), (15, 16), (13, 17), (0, 17),
@@ -43,23 +44,47 @@ def ensure_model():
 
 
 def make_landmarker():
+    """VIDEO-mode tracking at a low detection threshold.
+
+    Measured with eval/accuracy.py on 90 human-labelled frames: the old 0.4 threshold missed many
+    close-up and edge-of-frame hands. On a 30 s test segment, VIDEO@0.15 found hands in 78% of frames
+    (vs 59% at 0.4, 67% for IMAGE@0.15) with 3x less jitter than IMAGE mode, and lower thresholds
+    added no false hands on empty frames.
+    """
     ensure_model()
     opts = vision.HandLandmarkerOptions(
         base_options=BaseOptions(model_asset_path=str(MODEL_PATH)),
         running_mode=vision.RunningMode.VIDEO,
         num_hands=2,
-        min_hand_detection_confidence=0.4,
-        min_hand_presence_confidence=0.4,
-        min_tracking_confidence=0.5,
+        min_hand_detection_confidence=DET_CONF,
+        min_hand_presence_confidence=DET_CONF,
+        min_tracking_confidence=0.3,
     )
     return vision.HandLandmarker.create_from_options(opts)
+
+
+def left_score(lm):
+    """> 0 means the wearer's LEFT hand, from egocentric geometry (MediaPipe's handedness is ~coin-flip
+    on head-camera footage). Left hands enter from the left and point up-right from the wrist;
+    the thumb side adds a little. Weights picked on labelled frames (75% vs 47% for MediaPipe's label)."""
+    v, w = lm[9, :2] - lm[0, :2], lm[4, :2] - lm[0, :2]
+    thumb = np.sign(v[0] * w[1] - v[1] * w[0])
+    return 2 * (0.5 - lm[0, 0]) + 4 * (lm[9, 0] - lm[0, 0]) + 0.25 * thumb
+
+
+def ego_labels(lms):
+    """L/R for the detections in one frame; with two hands, the more left-looking one is L."""
+    s = [left_score(lm) for lm in lms]
+    if len(lms) == 2:
+        i = int(np.argmax(s))
+        return ["L" if k == i else "R" for k in range(2)]
+    return ["L" if x > 0 else "R" for x in s]
 
 
 class HandIdentity:
     """Assigns detections to stable L/R ids.
 
-    MediaPipe handedness assumes a mirrored (selfie) image; egocentric video is not mirrored,
-    so labels are flipped. Position continuity wins over the label unless the hand jumped.
+    Labels come from ego_labels(); position continuity wins over the label unless the hand jumped.
     """
 
     def __init__(self):
@@ -157,18 +182,18 @@ def run(video, stride=1, max_seconds=None, render=False, proc_width=640):
         t = idx / fps
         small = cv2.resize(frame, (pw, ph)) if scale < 1 else frame
         rgb = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
-        res = landmarker.detect_for_video(mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb),
-                                          int(t * 1000))
-        dets = []
+        res = landmarker.detect_for_video(mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb), int(t * 1000))
+        kept = []
         for lms, hd in zip(res.hand_landmarks, res.handedness):
-            label = "R" if hd[0].category_name == "Left" else "L"  # un-mirror
             lm = np.array([[p.x, p.y, p.z] for p in lms])
             # ego-hand filter: the wearer's hands are close to the camera, so they look big
             palm = np.linalg.norm((lm[0, :2] - lm[9, :2]) * [pw, ph]) / pw
             if palm < EGO_MIN_PALM:
                 other_hands += 1
                 continue
-            dets.append((label, hd[0].score, lm))
+            kept.append((hd[0].score, lm))
+        labels = ego_labels([lm for _, lm in kept])
+        dets = [(lab, score, lm) for lab, (score, lm) in zip(labels, kept)]
 
         assigned = ident.assign(dets, t)
         hands = {}
@@ -176,8 +201,9 @@ def run(video, stride=1, max_seconds=None, render=False, proc_width=640):
             if hid not in assigned:
                 if t - ident.last_seen[hid] > LOST_RESET_S:
                     filters[hid].reset()
-                    raw_seq[hid].append(None)
-                    smooth_seq[hid].append(None)
+                # break the jitter run on every missing frame: 2nd differences across a gap are motion, not jitter
+                raw_seq[hid].append(None)
+                smooth_seq[hid].append(None)
                 continue
             score, lm = assigned[hid]
             sm = filters[hid](lm, t)

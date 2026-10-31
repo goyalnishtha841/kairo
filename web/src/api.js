@@ -17,6 +17,7 @@ export const api = {
     }).then(j),
   compare: (ref, target) => fetch(`/api/compare?ref=${encodeURIComponent(ref)}&target=${encodeURIComponent(target)}`).then(j),
   raw: () => fetch("/api/raw").then(j),
+  accuracy: () => fetch("/api/accuracy").then(j),
   process: (id) => fetch(`/api/process/${encodeURIComponent(id)}`, { method: "POST" }).then(j),
   upload: (file) => {
     const fd = new FormData();

@@ -50,7 +50,10 @@ if __name__ == "__main__":
     ap.add_argument("--all", action="store_true")
     ap.add_argument("--skip-existing", action="store_true")
     ap.add_argument("--stride", type=int, default=2)
+    ap.add_argument("--no-captions", action="store_true", help="skip LLM step names (run ai/recaption.py later)")
     a = ap.parse_args()
+    if a.no_captions:
+        ENGINE = "rules"
     clips = sorted(p.stem for p in RAW.glob("*.mp4")) if a.all else a.clips
     for c in clips:
         process(c, a.stride, a.skip_existing)

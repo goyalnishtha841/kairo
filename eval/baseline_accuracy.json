@@ -1,0 +1,13 @@
+{
+ "frames_labelled": 90,
+ "clips": 15,
+ "detections": 60,
+ "ground_truth_hands": 119,
+ "correct_detections": 55,
+ "precision": 0.917,
+ "recall": 0.462,
+ "left_right_accuracy": 0.473,
+ "frame_presence_accuracy": 0.644,
+ "method": "Human-labelled frames, stratified half tracked / half untracked, across all processed clips.",
+ "f1": 0.614
+}

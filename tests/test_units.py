@@ -32,6 +32,17 @@ def test_identity_trusts_label_after_hand_was_lost():
     assert "R" in out
 
 
+def test_ego_labels_use_egocentric_geometry():
+    # a hand low on the left whose fingers point up-right is the wearer's LEFT hand
+    left = fake_hand(.3, .8)
+    left[9, 0] = .36
+    right = fake_hand(.7, .8)
+    right[9, 0] = .64
+    assert hands.ego_labels([left, right]) == ["L", "R"]
+    assert hands.ego_labels([right, left]) == ["R", "L"]
+    assert hands.ego_labels([left]) == ["L"] and hands.ego_labels([right]) == ["R"]
+
+
 def test_ego_threshold_separates_near_and_far_hands():
     # palm length as a fraction of frame width (square frame here)
     near, far = 0.08, 0.02

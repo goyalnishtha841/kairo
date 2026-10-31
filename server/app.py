@@ -109,6 +109,12 @@ def engine():
     return {"engine": copilot.available_engine()}
 
 
+@app.get("/api/accuracy")
+def get_accuracy():
+    p = OUT / "accuracy.json"
+    return json.loads(p.read_text()) if p.exists() else None
+
+
 @app.get("/api/compare")
 def get_compare(ref: str, target: str):
     clip_dir(ref), clip_dir(target)
