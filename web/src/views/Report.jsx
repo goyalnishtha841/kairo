@@ -107,6 +107,61 @@ function RootCause({ findings, seek }) {
   );
 }
 
+function CollaborationScore({ clips }) {
+  const [cs, setCs] = useState(null);
+  useEffect(() => { api.collaborationScore(clips).then(setCs).catch(() => {}); }, [clips.join(",")]);
+  if (!cs || !cs.total_collaboration_events) return null;
+  return (
+    <div className="tiles" style={{ marginBottom: 16 }}>
+      <div className="tile"><span>Help frequency</span><b>{cs.avg_help_frequency_per_hour}</b><small>events / hour, avg</small></div>
+      <div className="tile"><span>Total waiting</span><b>{cs.total_waiting_s}s</b><small>work paused for someone else</small></div>
+      <div className="tile"><span>Most waiting</span><b>{cs.clip_with_most_waiting?.slice(-6) || "–"}</b><small>{cs.note}</small></div>
+    </div>
+  );
+}
+
+const DELAY_DIMS = [
+  { k: "task", label: "Task", q: "which task causes the highest delay?" },
+  { k: "friction", label: "Friction type", q: "which friction type causes the highest delay?" },
+  { k: "tool", label: "Tool", q: "which tool causes the highest delay?" },
+];
+
+function KnowledgeGraph({ clips }) {
+  const [dim, setDim] = useState("task");
+  const [res, setRes] = useState(null);
+  useEffect(() => {
+    const q = DELAY_DIMS.find((d) => d.k === dim).q;
+    api.knowledgeGraph(q, clips).then(setRes).catch(() => setRes(null));
+  }, [dim, clips.join(",")]);
+  return (
+    <>
+      <h3 className="sec">Knowledge graph: delay by…</h3>
+      <div className="panel glass pad">
+        <div className="row" style={{ marginBottom: 10 }}>
+          {DELAY_DIMS.map((d) => (
+            <button key={d.k} className={"ghost sm" + (dim === d.k ? " on" : "")} onClick={() => setDim(d.k)}>{d.label}</button>
+          ))}
+        </div>
+        {!res ? <p className="muted small">Loading…</p> : (
+          <>
+            <p>{res.answer}</p>
+            {res.rows.length > 0 && (
+              <table className="tbl">
+                <thead><tr><th>{DELAY_DIMS.find((d) => d.k === dim).label}</th><th>Total delay</th></tr></thead>
+                <tbody>
+                  {res.rows.slice(0, 8).map((row, i) => (
+                    <tr key={i}><td>{row.key}</td><td>{row.total_delay_s}s</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </>
+        )}
+      </div>
+    </>
+  );
+}
+
 export default function Report({ report, clips, seek }) {
   const r = report;
   const f = r.friction;
@@ -170,7 +225,10 @@ export default function Report({ report, clips, seek }) {
         </>
       )}
 
+      <KnowledgeGraph clips={r.clips} />
+
       <h3 className="sec">Collaboration events</h3>
+      <CollaborationScore clips={r.clips} />
       {r.collaboration_events?.length ? (
         <table className="tbl">
           <thead><tr><th>Recording</th><th>When</th><th>Duration</th><th>Type</th><th>Confidence</th><th>Signals</th></tr></thead>

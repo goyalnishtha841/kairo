@@ -5,6 +5,41 @@ import { Rich } from "./Copilot.jsx";
 
 const LEVEL_CLASS = { Advanced: "ok", Intermediate: "warn", "Needs training": "bad" };
 
+function Drift({ clip }) {
+  const [d, setD] = useState(null);
+  useEffect(() => { setD(null); api.drift(clip).then(setD).catch(() => {}); }, [clip]);
+  if (!d) return null;
+  return (
+    <>
+      <h3 className="sec">Behaviour vs this station's own recent history (adaptive baseline)</h3>
+      <div className="panel glass pad">
+        {d.prior_clips.length === 0 ? (
+          <p className="muted small">{d.headline}</p>
+        ) : (
+          <>
+            <p>
+              <span className={"pill " + (d.drifted ? (d.change_pct < 0 ? "bad" : "ok") : "warn")}>
+                {d.change_pct > 0 ? "+" : ""}{d.change_pct}%
+              </span>{" "}{d.headline}
+            </p>
+            <p className="muted small">
+              {d.today_active_work_s}s active work vs a {d.baseline_active_work_s}s median from
+              {" "}{d.prior_clips.length} prior recording{d.prior_clips.length > 1 ? "s" : ""} of this station
+              ({d.prior_clips.join(", ")}).
+            </p>
+            {d.drifted && d.possible_reasons.length > 0 && (
+              <ul className="replist">
+                {d.possible_reasons.map((r, i) => <li key={i}>{r}</li>)}
+              </ul>
+            )}
+            <p className="muted small">{d.method}</p>
+          </>
+        )}
+      </div>
+    </>
+  );
+}
+
 export default function Proficiency({ clip, seek, setClip }) {
   const [p, setP] = useState(null);
   const [err, setErr] = useState(null);
@@ -70,6 +105,8 @@ export default function Proficiency({ clip, seek, setClip }) {
         </table>
       </div>
       <p className="muted small">{p.method} Collaboration in this recording: {p.context.collaboration_s_per_min} s/min (context only, not scored).</p>
+
+      <Drift clip={clip} />
     </div>
   );
 }
