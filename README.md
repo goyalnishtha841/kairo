@@ -35,6 +35,7 @@ python -m gdown --folder "<drive folder url>" -O data/raw --continue
 ## Process clips
 ```bash
 python pipeline.py --all --skip-existing          # or: python pipeline.py MTL-SGF00106-021 ...
+python ai/recaption.py                            # fill in missing step names; waits out Groq rate limits
 ```
 Per clip this writes `outputs/<clip>/hands.json`, `metrics.json`, `timeline.json`, `frames/`, `web.mp4`
 (H.264 browser proxy), plus `outputs/shift_report.json` over all processed clips.
