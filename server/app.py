@@ -29,6 +29,7 @@ for sub in ("events", "ai"):
 import compare  # noqa: E402
 import copilot  # noqa: E402
 import insights  # noqa: E402
+import proficiency  # noqa: E402
 import recommend  # noqa: E402
 
 CLIP_ID_RE = re.compile(r"^[\w.-]{1,80}$")
@@ -108,6 +109,15 @@ def ask(body: Ask):
 @app.get("/api/engine")
 def engine():
     return {"engine": copilot.available_engine()}
+
+
+@app.get("/api/proficiency")
+def get_proficiency(clip: str):
+    clip_dir(clip)
+    cache = {}
+    res = proficiency.score(clip, cache)
+    res["curve"] = proficiency.station_curve(res["station"], cache)
+    return res
 
 
 @app.get("/api/simulate")

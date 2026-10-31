@@ -19,8 +19,8 @@ WORKDAYS_PER_YEAR = _f("KAIRO_WORKDAYS_PER_YEAR", 230.0)
 RECOVERABLE = {"search": 0.6, "transit": 0.4, "idle": 0.3, "hesitation": 0.5, "extra_reach": 0.3}
 
 # --- proficiency labels (thresholds on the WORKFLOW score, never on a person) --
-PROFICIENCY_ADVANCED = _f("KAIRO_PROF_ADVANCED", 70.0)
-PROFICIENCY_NEEDS_TRAINING = _f("KAIRO_PROF_NEEDS_TRAINING", 45.0)
+PROFICIENCY_ADVANCED = _f("KAIRO_PROF_ADVANCED", 62.0)   # 50 = the station median workflow
+PROFICIENCY_NEEDS_TRAINING = _f("KAIRO_PROF_NEEDS_TRAINING", 40.0)
 
 # --- collaboration (precision first) -----------------------------------------
 COLLAB_CONFIRMED = 0.90
