@@ -30,6 +30,7 @@ import compare  # noqa: E402
 import copilot  # noqa: E402
 import insights  # noqa: E402
 import proficiency  # noqa: E402
+import quality  # noqa: E402
 import recommend  # noqa: E402
 import skill_profile  # noqa: E402
 import verify  # noqa: E402
@@ -119,6 +120,17 @@ def get_proficiency(clip: str):
     cache = {}
     res = proficiency.score(clip, cache)
     res["curve"] = proficiency.station_curve(res["station"], cache)
+    return res
+
+
+@app.get("/api/quality")
+def get_quality(clip: str, ref: str = ""):
+    clip_dir(clip)
+    if ref:
+        clip_dir(ref)
+    cache = {}
+    res = quality.score(clip, ref or None, cache)
+    res["station_scores"] = quality.station_scores(res["station"], ref or None, cache)
     return res
 
 

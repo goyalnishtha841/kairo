@@ -66,7 +66,7 @@ python eval/accuracy.py sample --set heldout MTL-SKL00089-011 ...   # held-out s
 python eval/accuracy.py score [--set heldout]     # -> outputs/accuracy[_heldout].json, shown in the Shift Report
 ```
 
-## 4. Automated tests (140, run with `python -m pytest tests -q`)
+## 4. Automated tests (149, run with `python -m pytest tests -q`)
 
 | Suite | File | What it checks |
 |---|---|---|
@@ -76,6 +76,7 @@ python eval/accuracy.py score [--set heldout]     # -> outputs/accuracy[_heldout
 | Recommendations | `tests/test_recommend.py` (6) | Confidence grows with evidence and spread, consistency beats erratic durations, the ROI formula, full evidence records sorted by ROI, simulation removes exactly the recoverable share and shifts later time, and the simulate API. |
 | Proficiency | `tests/test_proficiency.py` (7) | Baseline is leave-one-out and same-station, every point is explained, below-baseline metrics cite timestamps, the median workflow scores near 50, more friction scores lower, levels follow the config, and the API. |
 | Temporal verification | `tests/test_verify.py` (13) | A one-frame dropout is bridged on the motion path, long dropouts and off-path or resized reappearances are not, teleports split a track, a weak isolated blip is rejected while confident or repeated short detections are kept, bridged frames are presence but not motion, **a stall where the hand is not detected is not a hesitation**. On real data: detection accounting, the saved timeline is rebuilt from the verified tracks, **held-out labels: recall up with no labelled real hand rejected and no precision loss**, and the API. |
+| Quality score | `tests/test_quality.py` (9) | Full points up to 1.1x baseline and none from 2x, n/a checks are left out and the score re-normalised, steps cut off by the recording edges are not timed, the tools check needs a reference and captions and names the wrong tool. On real data: every measured point has a reason, warnings cite timestamps, a reference turns on the sequence check (itself as reference does not), more idle scores lower on flow, the API and the copilot. |
 | Skill profile | `tests/test_skill.py` (10) | SPARC rates one smooth reach above a corrected one, sub-movement peaks ignore tracking ripple, a repeated grasp needs the same spot within 2 s, **head motion is removed** from hand velocity, k-means is deterministic. On real data: every recording gets a pattern and explanation, **labels never contradict the expertise index**, beginner-tone features cite timestamps, the API and the copilot. |
 | Collaboration | `tests/test_collaboration.py` (11) | **No event** for: a worker passing, crossing close, standing silently while work continues, talking while working independently, a noisy environment with nobody there, or a one-frame flicker. **Detected** for: real collaboration (confirmed, ≥0.90), the same without speech (only "possible"), and occluded faces (one event, not split). The speech threshold adapts to noise, and writing to the timeline is idempotent. |
 | Units and safety | `tests/test_units.py` (8) | Hand identity survives label flips. The Left/Right geometry works. The ego-hand threshold works. One-Euro reduces jitter without lag. Head-motion direction is right. The API rejects path traversal, unknown clips and non-video uploads. |
