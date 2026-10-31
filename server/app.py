@@ -29,6 +29,7 @@ for sub in ("events", "ai"):
 import compare  # noqa: E402
 import copilot  # noqa: E402
 import insights  # noqa: E402
+import recommend  # noqa: E402
 
 CLIP_ID_RE = re.compile(r"^[\w.-]{1,80}$")
 
@@ -107,6 +108,13 @@ def ask(body: Ask):
 @app.get("/api/engine")
 def engine():
     return {"engine": copilot.available_engine()}
+
+
+@app.get("/api/simulate")
+def get_simulate(clip: str, friction_type: str):
+    if friction_type not in insights.RECOVERABLE:
+        raise HTTPException(400, f"friction_type must be one of {sorted(insights.RECOVERABLE)}")
+    return recommend.simulate(json.loads((clip_dir(clip) / "timeline.json").read_text()), friction_type)
 
 
 @app.get("/api/accuracy")

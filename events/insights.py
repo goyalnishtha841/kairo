@@ -9,13 +9,16 @@ Usage:
 import argparse
 import json
 from collections import Counter, defaultdict
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "outputs"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import config as C  # noqa: E402
+import recommend  # noqa: E402
 
-# fraction of each friction type we believe a fix can remove (conservative, stated on screen)
-RECOVERABLE = {"search": 0.6, "transit": 0.4, "idle": 0.3, "hesitation": 0.5, "extra_reach": 0.3}
+RECOVERABLE = C.RECOVERABLE  # share of each friction type a fix can remove (stated on screen)
 
 
 def load(clip_id):
@@ -54,46 +57,7 @@ def analyse(clip_ids, shift_hours=8.0):
     lost_s = sum(ev_time[k] for k in RECOVERABLE)
     recoverable_s = sum(ev_time[k] * RECOVERABLE[k] for k in RECOVERABLE)
 
-    recs = []
-
-    def rec(kind, title, detail, typ, saving_s):
-        ev = sorted(evidence[typ], key=lambda x: -x["dur"])[:5]
-        recs.append({"kind": kind, "title": title, "detail": detail, "friction_type": typ,
-                     "saving_min_per_shift": round(saving_s * scale / 60, 1),
-                     "cycle_time_reduction_pct": round(100 * saving_s / max(observed, 1e-6), 1),
-                     "evidence": ev, "support": f"{ev_count[typ]} events in {observed / 60:.1f} min observed"})
-
-    if ev_count["search"]:
-        side = search_dirs.most_common(1)[0][0] if search_dirs else None
-        where = (f"Most searches turned the head to the {side} ({search_dirs[side]}/{ev_count['search']}), "
-                 f"so frequently used tools sit outside the primary work zone. ") if side else ""
-        rec("layout", "Stage frequently used tools in the front work zone",
-            where + f"Searching cost {ev_time['search']:.0f}s ({ev_count['search']} times, "
-                    f"avg {ev_time['search'] / ev_count['search']:.1f}s). A fixed tool cart / shadow board "
-                    f"within arm's reach in front of the work piece removes most of it.",
-            "search", ev_time["search"] * RECOVERABLE["search"])
-    if ev_count["transit"]:
-        rec("flow", "Kit materials at the station before each build",
-            f"The worker left the work area {ev_count['transit']} times for {ev_time['transit']:.0f}s in total "
-            f"(avg {ev_time['transit'] / ev_count['transit']:.1f}s). Pre-cut parts and fasteners delivered on a "
-            f"kit trolley cut walking.",
-            "transit", ev_time["transit"] * RECOVERABLE["transit"])
-    if ev_count["idle"]:
-        rec("flow", "Remove waiting time",
-            f"{ev_count['idle']} idle periods ({ev_time['idle']:.0f}s) with hands out of view and head still: "
-            f"usually waiting for material, a machine, or instructions.",
-            "idle", ev_time["idle"] * RECOVERABLE["idle"])
-    if ev_count["hesitation"]:
-        rec("method", "Add a jig or visual guide where hands hesitate",
-            f"{ev_count['hesitation']} hesitations ({ev_time['hesitation']:.0f}s): the hand stalls mid-task, "
-            f"typical of alignment or positioning without a reference stop.",
-            "hesitation", ev_time["hesitation"] * RECOVERABLE["hesitation"])
-    if ev_count["extra_reach"]:
-        rec("layout", "Shorten reach paths",
-            f"{ev_count['extra_reach']} movements took a path over 3x the straight line: parts or tools "
-            f"are placed awkwardly relative to the work piece.",
-            "extra_reach", ev_time["extra_reach"] * RECOVERABLE["extra_reach"])
-    recs.sort(key=lambda r: -r["saving_min_per_shift"])
+    recs = recommend.build(evidence, observed, len(clip_ids), dict(search_dirs), shift_hours)
 
     top = recs[0] if recs else None
     headline = None
@@ -101,7 +65,8 @@ def analyse(clip_ids, shift_hours=8.0):
         e = top["evidence"][0] if top["evidence"] else None
         headline = (f"Based on {observed / 60:.1f} min of footage, \"{top['title'].lower()}\" could cut cycle "
                     f"time by about {top['cycle_time_reduction_pct']}%, saving ~{top['saving_min_per_shift']} min "
-                    f"per {shift_hours:g}h shift. Supported by {top['support']}"
+                    f"per {shift_hours:g}h shift (about EUR {top['roi_eur_per_year']:,} per station per year, "
+                    f"confidence {round(100 * top['confidence'])}%). Supported by {top['support']}"
                     + (f", e.g. {e['clip_id']} at {fmt_t(e['t'])}." if e else "."))
 
     report = {
@@ -121,8 +86,12 @@ def analyse(clip_ids, shift_hours=8.0):
         "work_zones": {z: round(sum(s["duration_s"] for s in steps if s.get("zone") == z), 1)
                        for z in ("left", "center", "right")},
         "headline": headline,
+        "roi_eur_per_year_total": sum(r["roi_eur_per_year"] for r in recs),
         "assumptions": {"recoverable_fraction": RECOVERABLE,
-                        "note": "Shift figures are linear extrapolations from the observed footage."},
+                        "labor_eur_per_hour": C.LABOR_EUR_PER_HOUR, "shifts_per_day": C.SHIFTS_PER_DAY,
+                        "workdays_per_year": C.WORKDAYS_PER_YEAR,
+                        "note": "Shift figures are linear extrapolations from the observed footage. "
+                                "EUR per year = minutes per shift x labour rate x shifts per day x workdays."},
     }
     return report
 

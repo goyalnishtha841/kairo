@@ -33,3 +33,6 @@ dist/
 *.sqlite
 *.db
 .DS_Store
+
+# downloaded model files
+models/
