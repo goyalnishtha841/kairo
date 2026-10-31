@@ -8,3 +8,5 @@ imageio-ffmpeg
 groq
 # optional: Claude engine
 anthropic
+python-multipart
+pytest

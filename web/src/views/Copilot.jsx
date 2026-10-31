@@ -10,7 +10,7 @@ const SUGGEST = [
 const CITE = /\[([\w.-]+)@(\d{1,2}):(\d{2})\]/g;
 
 // renders text with [clip@mm:ss] citations as seek links and **bold**
-function Rich({ text, seek }) {
+export function Rich({ text, seek }) {
   const parts = [];
   let last = 0, m;
   CITE.lastIndex = 0;

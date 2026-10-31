@@ -15,6 +15,14 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question, clips }),
     }).then(j),
+  compare: (ref, target) => fetch(`/api/compare?ref=${encodeURIComponent(ref)}&target=${encodeURIComponent(target)}`).then(j),
+  raw: () => fetch("/api/raw").then(j),
+  process: (id) => fetch(`/api/process/${encodeURIComponent(id)}`, { method: "POST" }).then(j),
+  upload: (file) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return fetch("/api/upload", { method: "POST", body: fd }).then(j);
+  },
   video: (id) => `/media/${id}/web.mp4`,
   frame: (id, name) => `/media/${id}/frames/${name.replace(/^frames\//, "")}`,
 };

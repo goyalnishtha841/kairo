@@ -10,13 +10,16 @@ and a shift report.
 - **Never commit footage, frames, or screenshots.** `data/`, `outputs/` and all media are git-ignored.
 - Show results only on the common demo clips. Delete cloud uploads after the event.
 
+See [docs/OVERVIEW.md](docs/OVERVIEW.md) for the problem statement, architecture diagrams and test coverage.
+
 ## Layout
 ```
 perception/   hands.py (MediaPipe + L/R identity + One-Euro + metrics), ego_motion.py, web_proxy.py
-events/       timeline.py (states, friction, SOP steps), insights.py (savings + recommendations)
-ai/           copilot.py (rules engine; Claude with tools when credentials exist)
+events/       timeline.py (states, friction, SOP steps), insights.py (savings), compare.py (SOP comparator)
+ai/           copilot.py (Groq -> Claude -> rules), sop_labels.py (vision step names), env.py
 server/       FastAPI: /api/clips, /api/clips/{id}/timeline|hands, /api/report, /api/ask, /media
-web/          React + Vite UI: Analyze · SOP · Layout & Savings · Shift Report
+web/          React + Vite UI: Analyze · SOP · Compare · Layout & Savings · Shift Report · Clips
+tests/        59 integration + unit tests (python -m pytest tests -q)
 schema/       timeline contract + mock_timeline.json
 pipeline.py   runs everything for one or more clips
 ```

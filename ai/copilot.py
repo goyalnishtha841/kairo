@@ -33,7 +33,9 @@ def normalize(text):
     """LLMs sometimes emit typographic hyphens or CJK brackets inside citations; make them parseable."""
     for ch in "‐‑‒–—":
         text = text.replace(ch, "-")
-    return text.replace("【", "[").replace("】", "]").replace(" ", " ")
+    text = text.replace("【", "[").replace("】", "]").replace(" ", " ")
+    # drop an outer bracket pair wrapped around one or more cites: [[a][b]] -> [a][b]
+    return re.sub(r"\[\s*((?:\[[\w.-]+@\d{1,2}:\d{2}\][\s,;]*)+)\]", lambda m: m.group(1).strip(), text)
 
 
 def parse_citations(text):
@@ -83,8 +85,8 @@ def answer_rules(q, ctx):
     def ev_lines(typ, n=5, order="time"):
         evs = ctx.events(type=typ, limit=500)
         if order == "longest":
-            evs.sort(key=lambda e: e["t_start"] - e["t_end"])
-        return [f"- {LABELS.get(e['type'], e['type'])} {e['t_end'] - e['t_start']:.1f}s "
+            evs.sort(key=lambda e: -e["duration_s"])
+        return [f"- {LABELS.get(e['type'], e['type'])} {e['duration_s']:.1f}s "
                 f"{cite(e['clip_id'], e['t_start'])}" + (f" — {e['note']}" if e["note"] else "")
                 for e in evs[:n]]
 
@@ -102,8 +104,8 @@ def answer_rules(q, ctx):
             if first or last:
                 e = evs[0] if first else evs[-1]
                 return (f"The {'first' if first else 'last'} {LABELS[typ]} event was at "
-                        f"{cite(e['clip_id'], e['t_start'])}, lasting {e['t_end'] - e['t_start']:.1f}s. {e['note'] or ''}")
-            tot = sum(e["t_end"] - e["t_start"] for e in evs)
+                        f"{cite(e['clip_id'], e['t_start'])}, lasting {e['duration_s']:.1f}s. {e['note'] or ''}")
+            tot = sum(e["duration_s"] for e in evs)
             return (f"{len(evs)} {LABELS[typ]} events, {tot:.0f}s in total. Longest:\n"
                     + "\n".join(ev_lines(typ, 5, "longest")))
 
@@ -200,7 +202,7 @@ def answer_claude(q, ctx, history=None):
 def answer_groq(q, ctx):
     from groq import Groq
 
-    client = Groq()
+    client = Groq(max_retries=4, timeout=60)
     tools = [{"type": "function", "function": {"name": t["name"], "description": t["description"],
                                                "parameters": t["input_schema"]}} for t in TOOLS]
     messages = [{"role": "system", "content": SYSTEM},

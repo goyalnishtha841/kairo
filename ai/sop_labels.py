@@ -62,7 +62,7 @@ def _claude(clip_id, steps):
 def _groq(clip_id, steps):
     from groq import Groq
 
-    client, items = Groq(), []
+    client, items = Groq(max_retries=5, timeout=120), []
     for k in range(0, len(steps), MAX_IMAGES):
         batch = steps[k:k + MAX_IMAGES]
         content = [{"type": "text", "text": PROMPT}]
@@ -88,7 +88,8 @@ def caption_clip(clip_id, engine="groq", force=False):
             continue
         s.setdefault("motion_label", s["label"])
         s["label"] = str(it.get("label") or s["label"])[:60]
-        s["tool"] = it.get("tool")
+        tool = str(it.get("tool") or "").strip()
+        s["tool"] = None if tool.lower() in ("", "null", "none", "n/a", "no tool") else tool[:40]
         s["captioned"] = True
     # propagate tool names onto events inside each step
     tools = {s["step_id"]: s.get("tool") for s in steps}

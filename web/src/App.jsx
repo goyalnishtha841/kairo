@@ -4,12 +4,16 @@ import Analyze from "./views/Analyze.jsx";
 import Sop from "./views/Sop.jsx";
 import Layout from "./views/Layout.jsx";
 import Report from "./views/Report.jsx";
+import Compare from "./views/Compare.jsx";
+import Clips from "./views/Clips.jsx";
 
 const TABS = [
   ["analyze", "Analyze"],
   ["sop", "SOP"],
+  ["compare", "Compare"],
   ["layout", "Layout & Savings"],
   ["report", "Shift Report"],
+  ["clips", "Clips"],
 ];
 
 export default function App() {
@@ -23,13 +27,17 @@ export default function App() {
   const pendingSeek = useRef(null);
   const videoRef = useRef(null);
 
-  useEffect(() => {
+  const loadClips = useCallback(() => {
     api.clips().then((cs) => {
       setClips(cs);
-      if (cs.length) setClip(cs[0].clip_id);
+      setClip((cur) => cur || cs[0]?.clip_id || null);
     }).catch((e) => setError(e.message));
-    api.engine().then(setEngine).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    loadClips();
+    api.engine().then(setEngine).catch(() => {});
+  }, [loadClips]);
 
   useEffect(() => {
     if (clips.length) api.report(clips.map((c) => c.clip_id)).then(setReport).catch((e) => setError(e.message));
@@ -89,7 +97,9 @@ export default function App() {
       </div>
 
       {error && <div className="error">Backend error: {error}. Is <code>uvicorn server.app:app --port 8000</code> running?</div>}
-      {!clips.length && !error && <div className="empty">No processed clips yet. Run <code>python pipeline.py --all</code>.</div>}
+      {!clips.length && !error && tab !== "clips" && (
+        <div className="empty">No processed clips yet. Open the <a className="cite" onClick={() => setTab("clips")}>Clips</a> tab to upload or process a video.</div>
+      )}
 
       <main>
         {tab === "analyze" && timeline && (
@@ -99,6 +109,10 @@ export default function App() {
         {tab === "sop" && timeline && <Sop clip={clip} timeline={timeline} seek={seek} />}
         {tab === "layout" && report && <Layout report={report} seek={seek} />}
         {tab === "report" && report && <Report report={report} clips={clips} seek={seek} />}
+        {tab === "compare" && clips.length > 0 && <Compare clips={clips} seek={seek} />}
+        {tab === "clips" && (
+          <Clips onProcessed={loadClips} metrics={Object.fromEntries(clips.map((c) => [c.clip_id, c.metrics]))} />
+        )}
       </main>
     </div>
   );

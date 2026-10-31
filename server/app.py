@@ -4,11 +4,16 @@ Run:  uvicorn server.app:app --reload --port 8000     (from the repo root)
 Serves the built UI from web/dist at / when present.
 """
 import json
+import queue
+import re
+import shutil
 import sys
+import threading
+import time
 from functools import lru_cache
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -16,11 +21,16 @@ from pydantic import BaseModel
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "outputs"
+RAW = ROOT / "data" / "raw"
+sys.path.insert(0, str(ROOT))
 for sub in ("events", "ai"):
     sys.path.insert(0, str(ROOT / sub))
 
+import compare  # noqa: E402
 import copilot  # noqa: E402
 import insights  # noqa: E402
+
+CLIP_ID_RE = re.compile(r"^[\w.-]{1,80}$")
 
 app = FastAPI(title="Kairo")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -97,6 +107,72 @@ def ask(body: Ask):
 @app.get("/api/engine")
 def engine():
     return {"engine": copilot.available_engine()}
+
+
+@app.get("/api/compare")
+def get_compare(ref: str, target: str):
+    clip_dir(ref), clip_dir(target)
+    return compare.compare(ref, target)
+
+
+# --------------------------------------------------------------------------- processing jobs
+# One worker thread: perception is CPU-bound, so clips are processed one at a time.
+JOBS: dict[str, dict] = {}
+_queue: "queue.Queue[str]" = queue.Queue()
+
+
+def _worker():
+    import pipeline  # heavy (mediapipe); imported on first job
+
+    while True:
+        clip_id = _queue.get()
+        job = JOBS[clip_id]
+        job.update(state="running", started=time.time())
+        try:
+            pipeline.process(clip_id, stride=job.get("stride", 2))
+            job.update(state="done", finished=time.time())
+        except Exception as e:
+            job.update(state="failed", error=f"{type(e).__name__}: {e}", finished=time.time())
+        _queue.task_done()
+
+
+threading.Thread(target=_worker, daemon=True).start()
+
+
+@app.get("/api/raw")
+def list_raw():
+    done = set(processed())
+    return [{"clip_id": p.stem, "size_mb": round(p.stat().st_size / 1e6, 1), "processed": p.stem in done,
+             "job": JOBS.get(p.stem)} for p in sorted(RAW.glob("*.mp4"))]
+
+
+@app.post("/api/process/{clip_id}")
+def start_process(clip_id: str, stride: int = 2):
+    if not CLIP_ID_RE.match(clip_id) or not (RAW / f"{clip_id}.mp4").exists():
+        raise HTTPException(404, "no such raw clip")
+    if JOBS.get(clip_id, {}).get("state") in ("queued", "running"):
+        return JOBS[clip_id]
+    JOBS[clip_id] = {"clip_id": clip_id, "state": "queued", "stride": max(1, min(stride, 6)),
+                     "queued": time.time()}
+    _queue.put(clip_id)
+    return JOBS[clip_id]
+
+
+@app.get("/api/jobs")
+def list_jobs():
+    return list(JOBS.values())
+
+
+@app.post("/api/upload")
+def upload(file: UploadFile = File(...)):
+    stem = re.sub(r"[^\w.-]", "_", Path(file.filename or "upload").stem)[:60] or "upload"
+    if not (file.filename or "").lower().endswith((".mp4", ".mov", ".mkv")):
+        raise HTTPException(400, "upload an .mp4/.mov/.mkv video")
+    RAW.mkdir(parents=True, exist_ok=True)
+    dest = RAW / f"{stem}.mp4"
+    with dest.open("wb") as f:
+        shutil.copyfileobj(file.file, f)
+    return start_process(stem)
 
 
 @app.get("/media/{clip_id}/web.mp4")
