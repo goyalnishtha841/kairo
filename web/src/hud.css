@@ -105,6 +105,20 @@ body {
 .tbl-wrap { overflow-x: auto; }
 .tbl td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 
+/* quality score */
+.qref { display: flex; flex-direction: column; gap: 4px; }
+.qref select { background: var(--panel2); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font: inherit; }
+.qchecks { list-style: none; margin: 0; padding: 10px 14px; display: flex; flex-direction: column; gap: 10px; }
+.qchecks li { display: flex; gap: 10px; align-items: flex-start; line-height: 1.45; }
+.qchecks li.q-na { opacity: .6; }
+.qmark { display: inline-flex; width: 20px; justify-content: center; font-weight: 700; flex: none; }
+.qmark.ok { color: var(--green); } .qmark.warn { color: var(--amber); } .qmark.bad { color: var(--red); }
+.qsteps { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.qstep { padding: 12px 14px; }
+.qstep-h { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+.qstep-h .pill { margin-left: auto; }
+.qstep ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+
 /* skill profile */
 .skmap { width: 100%; max-height: 300px; display: block; }
 .skpt { cursor: pointer; }

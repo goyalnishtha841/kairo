@@ -18,6 +18,7 @@ sys.path.insert(0, str(ROOT / "ai"))
 import env  # noqa: E402,F401  (loads .env)
 from insights import analyse, fmt_t, load  # noqa: E402
 import proficiency  # noqa: E402
+import quality  # noqa: E402
 import skill_profile  # noqa: E402
 import attention  # noqa: E402
 import baseline_drift  # noqa: E402
@@ -112,6 +113,18 @@ class Context:
         rows.sort(key=lambda x: x["score"] if x["score"] is not None else 100)
         return rows[:limit] if not clip_id else rows
 
+    def quality(self, clip_id=None, ref=None):
+        """Quality score (0-100) per recording with a reason per check; lowest first when no clip is given."""
+        cache = {}
+        rows = []
+        for c in ([clip_id] if clip_id else self.clip_ids):
+            q = quality.score(c, ref, cache)
+            rows.append({"clip_id": c, "score": q["score"], "grade": q["grade"], "reliability": q["reliability"],
+                         "checks": [{"check": k["check"], "status": k["status"], "reason": k["reason"],
+                                     "details": k["details"][:2]} for k in q["checks"]]})
+        rows.sort(key=lambda x: x["score"] if x["score"] is not None else 101)
+        return rows
+
     def skill(self, clip_id=None):
         """Motion skill pattern (expert-like / developing / beginner-like) per recording, learned without labels."""
         cache = {}
@@ -189,6 +202,17 @@ def answer_rules(q, ctx):
                 f"{x['observation']} Evidence: {x['support']}"
                 + (f", e.g. {cite(ev['clip_id'], ev['t'])}." if ev else ".")
                 + f" Assumes EUR {r['assumptions']['labor_eur_per_hour']:g}/h; shift figures are extrapolated.")
+    if any(w in ql for w in ("quality", "how well", "done well", "grade")):
+        rows = ctx.quality()
+        mark = {"ok": "✓", "warn": "⚠", "fail": "✗"}
+        out = ["Quality scores (0-100) against each station's own baseline; n/a checks are left out "
+               "(this scores how the task was done, not a person):"]
+        for q in rows[:4]:
+            issues = [k for k in q["checks"] if k["status"] in ("warn", "fail")]
+            out.append(f"- {q['clip_id']}: {q['score']}/100 ({q['grade']})"
+                       + "".join(f"; {mark[k['status']]} {k['reason']} {' '.join(k['details'][:1])}".rstrip()
+                                 for k in issues[:2]))
+        return "\n".join(out)
     if any(w in ql for w in ("expert", "beginner", "novice", "motion", "smooth", "grasp", "cluster",
                              "skill profil", "experienced")):
         rows = ctx.skill()
@@ -351,6 +375,12 @@ TOOLS = [
     {"name": "get_proficiency", "description": "Workflow score (0-100, 50 = station baseline) with explained "
      "deviations and evidence cites. Omit clip_id for the recordings that deviate most. Describes workflows, "
      "never people.", "input_schema": {"type": "object", "properties": {"clip_id": {"type": ["string", "null"]}}}},
+    {"name": "get_quality", "description": "Quality score (0-100) of how a task was done, with a pass/warn/fail "
+     "reason and evidence cites per check: sequence and tools (vs a reference SOP recording, given as ref), time "
+     "vs the station's typical step durations, extra movement, and idle/search flow. Unmeasurable checks are n/a. "
+     "Omit clip_id for all selected recordings, lowest score first.",
+     "input_schema": {"type": "object", "properties": {"clip_id": {"type": ["string", "null"]},
+                                                       "ref": {"type": ["string", "null"]}}}},
     {"name": "get_skill_profile", "description": "Motion skill pattern per recording (Expert-like, Developing, "
      "Beginner-like), clustered without labels from hand-motion features: smoothness, speed, corrections, "
      "repeated grasps, motion entropy, idle time, looking around. Index 50 = the station's typical motion. "
@@ -436,6 +466,8 @@ def _run_tool(ctx, name, args):
         return ctx.recommendations()
     if name == "get_proficiency":
         return ctx.proficiency(args.get("clip_id"))
+    if name == "get_quality":
+        return ctx.quality(args.get("clip_id"), args.get("ref"))
     if name == "get_skill_profile":
         return ctx.skill(args.get("clip_id"))
     if name == "check_sop_compliance":
