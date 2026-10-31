@@ -93,6 +93,58 @@ function FrictionTimeline({ timeline, now, onSeek }) {
   );
 }
 
+function Attention({ clip }) {
+  const [hm, setHm] = useState(null);
+  useEffect(() => { setHm(null); api.attention(clip).then(setHm).catch(() => {}); }, [clip]);
+  if (!hm) return null;
+  const rows = Object.entries(hm.pct).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+  const ZONE_LABEL = { machine: "Machine / work", tool_search_left: "Tool search (left)",
+    tool_search_center: "Tool search (center)", tool_search_right: "Tool search (right)",
+    colleague: "Colleague", floor_or_away: "Idle / away" };
+  const ZONE_COLOR = { machine: "var(--green)", tool_search_left: "var(--red)", tool_search_center: "var(--red)",
+    tool_search_right: "var(--red)", colleague: "var(--blue)", floor_or_away: "var(--amber)" };
+  return (
+    <div className="panel attention">
+      <div className="panel-h"><h3>Attention</h3><span className="muted">where the camera pointed</span></div>
+      <div className="stack">
+        {rows.map(([k, v]) => <div key={k} style={{ width: `${v}%`, background: ZONE_COLOR[k] }} title={`${ZONE_LABEL[k] || k} ${v}%`} />)}
+      </div>
+      <div className="legend">
+        {rows.map(([k, v]) => <span key={k}><i style={{ background: ZONE_COLOR[k] }} />{ZONE_LABEL[k] || k} {v}%</span>)}
+      </div>
+      <p className="muted small">
+        From hand visibility, head scanning and collaboration signals, not gaze tracking.
+        {hm.not_detected.length > 0 && ` Not detected: ${hm.not_detected.join(", ")}.`}
+      </p>
+    </div>
+  );
+}
+
+function DigitalTwin({ clip, seek }) {
+  const [open, setOpen] = useState(false);
+  const [dt, setDt] = useState(null);
+  useEffect(() => { if (open && !dt) api.digitalTwin(clip).then(setDt).catch(() => {}); }, [open, clip]);
+  useEffect(() => { setDt(null); }, [clip]);
+  return (
+    <div className="panel twin">
+      <div className="panel-h" style={{ cursor: "pointer" }} onClick={() => setOpen(!open)}>
+        <h3>Digital twin timeline</h3><span className="muted">{open ? "hide" : "show"} narrated story ▾</span>
+      </div>
+      {open && !dt && <div className="muted small pad">Loading…</div>}
+      {open && dt && (
+        <ol className="twin-list">
+          {dt.timeline.map((e, i) => (
+            <li key={i}>
+              <a className="cite" onClick={() => seek(clip, e.t)}>▶ {e.t_label}</a>
+              <b>{e.event}</b><span className="muted">{e.detail}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
 export default function Analyze({ clip, timeline, videoRef, onVideoReady, seek, clips }) {
   const canvasRef = useRef(null);
   const [overlay, setOverlay] = useState(true);
@@ -153,6 +205,8 @@ export default function Analyze({ clip, timeline, videoRef, onVideoReady, seek, 
             {!shown.length && <div className="muted pad">No events.</div>}
           </div>
         </div>
+        <Attention clip={clip} />
+        <DigitalTwin clip={clip} seek={seek} />
         <Copilot clips={clips} seek={seek} />
       </section>
     </div>

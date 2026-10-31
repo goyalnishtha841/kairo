@@ -27,6 +27,14 @@ export const api = {
   shiftSummary: (clips) => fetch(`/api/shift-summary?clips=${clips.join(",")}`).then(j),
   rootCause: (clips) => fetch(`/api/root-cause?clips=${clips.join(",")}`).then(j),
   safety: (clip) => fetch(`/api/safety?clip=${encodeURIComponent(clip)}`).then(j),
+  attention: (clip) => fetch(`/api/attention?clip=${encodeURIComponent(clip)}`).then(j),
+  digitalTwin: (clip, shiftStart) =>
+    fetch(`/api/digital-twin?clip=${encodeURIComponent(clip)}` + (shiftStart ? `&shift_start=${shiftStart}` : "")).then(j),
+  collaborationScore: (clips) => fetch(`/api/collaboration-score?clips=${clips.join(",")}`).then(j),
+  drift: (clip) => fetch(`/api/drift?clip=${encodeURIComponent(clip)}`).then(j),
+  knowledgeGraph: (question, clips) =>
+    fetch(`/api/knowledge-graph?question=${encodeURIComponent(question)}&clips=${clips.join(",")}`).then(j),
+  memory: (label, clips) => fetch(`/api/memory?label=${encodeURIComponent(label)}&clips=${clips.join(",")}`).then(j),
   sopCompliance: (clipId, expectedSteps, mandatory) =>
     fetch("/api/sop-compliance", {
       method: "POST",

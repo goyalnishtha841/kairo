@@ -148,7 +148,7 @@ export default function App() {
         {tab === "proficiency" && clip && <Proficiency clip={clip} seek={seek} setClip={setClip} />}
         {tab === "skill" && clip && <Skill clip={clip} seek={seek} setClip={setClip} />}
         {tab === "quality" && clip && <Quality clip={clip} clips={clips.map((c) => c.clip_id)} seek={seek} setClip={setClip} />}
-        {tab === "sop" && timeline && <Sop clip={clip} timeline={timeline} seek={seek} />}
+        {tab === "sop" && timeline && <Sop clip={clip} timeline={timeline} seek={seek} clips={clips.map((c) => c.clip_id)} />}
         {tab === "compare" && clips.length > 0 && <Compare clips={clips} seek={seek} />}
         {tab === "report" && report && <Report report={report} clips={clips} seek={seek} />}
         {tab === "clips" && (

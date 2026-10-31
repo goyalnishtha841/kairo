@@ -105,6 +105,7 @@ h3 { font-size: 14px; }
 .ask input { flex: 1; background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; color: var(--fg); font: inherit; }
 .ask button, .ghost { background: var(--accent); color: #04121f; border: 0; border-radius: 8px; padding: 8px 14px; font-weight: 600; }
 .ghost { background: var(--panel2); color: var(--fg); border: 1px solid var(--line); }
+.ghost.on { border-color: var(--accent); background: #16243a; color: var(--accent); }
 .cite { color: var(--accent); cursor: pointer; font-family: "JetBrains Mono", monospace; font-size: 12px; background: #16243a; padding: 1px 6px; border-radius: 4px; white-space: nowrap; margin: 0 2px; }
 .cite:hover { background: #1d3350; }
 
@@ -131,6 +132,11 @@ h3 { font-size: 14px; }
 .grid2 .panel { padding-bottom: 14px; }
 .grid2 .legend { padding: 0 14px; }
 .stack { display: flex; height: 26px; margin: 16px 14px 0; border-radius: 6px; overflow: hidden; }
+.attention .legend, .attention > p { margin-left: 14px; margin-right: 14px; }
+.attention > p { padding-bottom: 12px; }
+.twin-list { list-style: none; margin: 0; padding: 6px 14px 14px; display: flex; flex-direction: column; gap: 8px; }
+.twin-list li { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+.twin-list b { flex-shrink: 0; }
 .bign { display: flex; gap: 28px; padding: 18px 14px 0; }
 .bign div { display: flex; flex-direction: column; }
 .bign b { font-size: 30px; }

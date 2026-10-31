@@ -1,6 +1,43 @@
 import React, { useState } from "react";
 import { api, fmt } from "../api.js";
 
+function Memory({ clips, seek }) {
+  const [label, setLabel] = useState("");
+  const [result, setResult] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const check = () => {
+    if (!label.trim()) return;
+    setBusy(true);
+    api.memory(label.trim(), clips).then(setResult).finally(() => setBusy(false));
+  };
+
+  return (
+    <div className="compliance">
+      <h3 className="sec">Already done this shift?</h3>
+      <p className="muted small">
+        Checks every clip in the current shift selection, in order, for a step matching this label --
+        so a supervisor (or the copilot) never re-reports the same completed work.
+      </p>
+      <div className="row">
+        <input style={{ flex: 1 }} placeholder="e.g. tighten bolt 4, inspect panel, close cover"
+               value={label} onChange={(e) => setLabel(e.target.value)}
+               onKeyDown={(e) => e.key === "Enter" && check()} />
+        <button className="ghost" disabled={busy || !label.trim()} onClick={check}>{busy ? "Checking…" : "Check"}</button>
+      </div>
+      {result && (
+        <p className={result.already_done ? "" : "muted"} style={{ marginTop: 10 }}>
+          {result.already_done ? "✓ " : "— "}
+          {result.already_done
+            ? <>Already completed{" "}<a className="cite" onClick={() => seek(result.first_seen.clip_id, result.first_seen.t_start)}>
+                ▶ {result.first_seen.cite}</a> ({result.first_seen.label}).</>
+            : result.note}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function Compliance({ clip, seek }) {
   const [text, setText] = useState("");
   const [mandatory, setMandatory] = useState("");
@@ -70,7 +107,7 @@ function Compliance({ clip, seek }) {
   );
 }
 
-export default function Sop({ clip, timeline, seek }) {
+export default function Sop({ clip, timeline, seek, clips }) {
   const steps = timeline.steps;
   const total = steps.reduce((a, s) => a + s.duration_s, 0);
   const evBy = (sid) => timeline.events.filter((e) => e.step_id === sid && e.severity !== "green");
@@ -118,6 +155,7 @@ export default function Sop({ clip, timeline, seek }) {
         })}
       </div>
       <Compliance clip={clip} seek={seek} />
+      <Memory clips={clips || [clip]} seek={seek} />
     </div>
   );
 }
