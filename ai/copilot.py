@@ -314,24 +314,29 @@ def claude_available():
         return False
 
 
+def available_engines():
+    """LLM engines with credentials, in fallback order (rules is implicit and always last)."""
+    return [name for name, ok in (("groq", groq_available), ("claude", claude_available)) if ok()]
+
+
 def available_engine():
-    return "groq" if groq_available() else "claude" if claude_available() else "rules"
+    return (available_engines() or ["rules"])[0]
 
 
 def ask(question, clip_ids, engine="auto"):
     ctx = Context(clip_ids)
     used = "rules"
     text = None
-    order = {"auto": [available_engine()], "groq": ["groq"], "claude": ["claude"], "rules": []}.get(engine, [])
+    order = {"auto": available_engines(), "groq": ["groq"], "claude": ["claude"]}.get(engine, [])
     for name in order:
-        if name == "rules":
-            break
         try:
             text = answer_groq(question, ctx) if name == "groq" else answer_claude(question, ctx)
-            used = name if text else "rules"
-        except Exception as e:  # network / auth / rate limit -> deterministic fallback
+        except Exception as e:  # network / auth / rate limit -> next engine, then deterministic rules
             text = None
-            print(f"{name} engine failed, using rules: {type(e).__name__}: {e}", file=sys.stderr)
+            print(f"{name} engine failed: {type(e).__name__}: {e}", file=sys.stderr)
+        if text:
+            used = name
+            break
     if not text:
         text, used = answer_rules(question, ctx), "rules"
     text = normalize(text)
@@ -343,6 +348,6 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("question")
     ap.add_argument("clips", nargs="+")
-    ap.add_argument("--engine", default="auto", choices=["auto", "rules", "claude"])
+    ap.add_argument("--engine", default="auto", choices=["auto", "rules", "groq", "claude"])
     a = ap.parse_args()
     print(json.dumps(ask(a.question, a.clips, a.engine), indent=1))

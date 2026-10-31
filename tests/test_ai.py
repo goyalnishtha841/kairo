@@ -113,3 +113,38 @@ def test_collaboration_query_includes_possible_events():
     ctx = copilot.Context(CLIPS)
     both = ctx.events(type="collaboration", limit=500)
     assert all(e["type"] in copilot.COLLAB for e in both)
+
+
+def _engines(monkeypatch, groq, claude, calls):
+    def fake(name, result):
+        def answer(q, ctx, *a, **k):
+            calls.append(name)
+            if isinstance(result, Exception):
+                raise result
+            return result
+        return answer
+    monkeypatch.setattr(copilot, "groq_available", lambda: True)
+    monkeypatch.setattr(copilot, "claude_available", lambda: True)
+    monkeypatch.setattr(copilot, "answer_groq", fake("groq", groq))
+    monkeypatch.setattr(copilot, "answer_claude", fake("claude", claude))
+
+
+def test_auto_falls_back_from_groq_to_claude(monkeypatch):
+    calls = []
+    _engines(monkeypatch, RuntimeError("rate limit"), f"Claude says [{CLIPS[0]}@00:05]", calls)
+    ans = copilot.ask("Why is this workstation inefficient?", CLIPS)
+    assert calls == ["groq", "claude"] and ans["engine"] == "claude"
+    assert_citations_valid(ans)
+
+
+def test_auto_uses_groq_first_when_it_works(monkeypatch):
+    calls = []
+    _engines(monkeypatch, f"Groq says [{CLIPS[0]}@00:05]", "unused", calls)
+    assert copilot.ask("Why?", CLIPS)["engine"] == "groq" and calls == ["groq"]
+
+
+def test_auto_falls_back_to_rules_when_all_llms_fail(monkeypatch):
+    calls = []
+    _engines(monkeypatch, RuntimeError("offline"), "", calls)
+    ans = copilot.ask("Where did the worker search for tools?", CLIPS)
+    assert calls == ["groq", "claude"] and ans["engine"] == "rules" and ans["citations"]
