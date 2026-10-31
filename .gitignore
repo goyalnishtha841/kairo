@@ -1,0 +1,35 @@
+# --- Hackathon data rules: NEVER commit footage, frames, or derived media ---
+data/
+frames/
+outputs/
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+*.jpg
+*.jpeg
+*.png
+*.gif
+
+# models
+models/*.task
+*.pt
+*.onnx
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# node
+node_modules/
+dist/
+.vite/
+
+# misc
+*.sqlite
+*.db
+.DS_Store

@@ -1,0 +1,20 @@
+{
+  "clip_id": "mock",
+  "fps": 30.0,
+  "duration_s": 60.0,
+  "steps": [
+    {"step_id": 1, "label": "Pick component", "t_start": 0.0, "t_end": 6.5, "keyframe": null},
+    {"step_id": 2, "label": "Align component", "t_start": 6.5, "t_end": 15.0, "keyframe": null},
+    {"step_id": 3, "label": "Tighten screws", "t_start": 15.0, "t_end": 34.0, "keyframe": null},
+    {"step_id": 4, "label": "Inspect", "t_start": 34.0, "t_end": 41.0, "keyframe": null}
+  ],
+  "events": [
+    {"id": "e0001", "t_start": 1.2, "t_end": 1.8, "type": "grasp", "hand": "R", "tool": null, "zone": "right_bin", "step_id": 1, "cycle_id": 1, "confidence": 0.9, "note": "grasp component"},
+    {"id": "e0002", "t_start": 7.0, "t_end": 9.4, "type": "hesitation", "hand": "R", "tool": null, "zone": "center", "step_id": 2, "cycle_id": 1, "confidence": 0.71, "note": "hand stalled near part before alignment"},
+    {"id": "e0003", "t_start": 15.2, "t_end": 18.6, "type": "search", "hand": "R", "tool": "screwdriver", "zone": "left_bin", "step_id": 3, "cycle_id": 1, "confidence": 0.84, "note": "head scanning, hovered over 2 bins"},
+    {"id": "e0004", "t_start": 18.6, "t_end": 31.0, "type": "tool_use", "hand": "R", "tool": "screwdriver", "zone": "center", "step_id": 3, "cycle_id": 1, "confidence": 0.88, "note": null},
+    {"id": "e0005", "t_start": 22.0, "t_end": 24.5, "type": "reattempt", "hand": "L", "tool": null, "zone": "center", "step_id": 3, "cycle_id": 1, "confidence": 0.66, "note": "3 grasp/release cycles on screw"},
+    {"id": "e0006", "t_start": 41.0, "t_end": 47.5, "type": "idle", "hand": "both", "tool": null, "zone": null, "step_id": null, "cycle_id": 1, "confidence": 0.93, "note": null},
+    {"id": "e0007", "t_start": 50.1, "t_end": 52.0, "type": "extra_reach", "hand": "L", "tool": null, "zone": "far_left", "step_id": null, "cycle_id": 2, "confidence": 0.6, "note": "path 2.4x straight-line"}
+  ]
+}
