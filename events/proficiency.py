@@ -53,7 +53,7 @@ def path_efficiency(clip_id):
     for hid in ("L", "R"):
         run = []
         for f in frames + [{"hands": []}]:
-            hd = next((h for h in f["hands"] if h["id"] == hid), None)
+            hd = next((h for h in f["hands"] if h["id"] == hid and not h.get("bridged")), None)
             if hd is not None:
                 run.append(np.array(hd["lm"])[[0, 5, 9, 13, 17], :2].mean(0))
                 continue

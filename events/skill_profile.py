@@ -83,7 +83,7 @@ def _tracks(hands):
         pos = np.full((len(fr), 2), np.nan)
         grip = np.full(len(fr), np.nan)
         for i, f in enumerate(fr):
-            hd = next((h for h in f["hands"] if h["id"] == hid), None)
+            hd = next((h for h in f["hands"] if h["id"] == hid and not h.get("bridged")), None)
             if hd is None:
                 continue
             lm = np.array(hd["lm"])[:, :2] * [1.0, ASPECT]

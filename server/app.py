@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "outputs"
 RAW = ROOT / "data" / "raw"
 sys.path.insert(0, str(ROOT))
-for sub in ("events", "ai"):
+for sub in ("events", "ai", "perception"):
     sys.path.insert(0, str(ROOT / sub))
 
 import compare  # noqa: E402
@@ -32,6 +32,7 @@ import insights  # noqa: E402
 import proficiency  # noqa: E402
 import recommend  # noqa: E402
 import skill_profile  # noqa: E402
+import verify  # noqa: E402
 
 CLIP_ID_RE = re.compile(r"^[\w.-]{1,80}$")
 
@@ -145,6 +146,18 @@ def get_accuracy():
     res = json.loads(p.read_text())
     if h.exists():
         res["heldout"] = json.loads(h.read_text())
+    return res
+
+
+@app.get("/api/verification")
+def get_verification():
+    """Temporal verification report (cached in outputs/verification.json; python perception/verify.py --report
+    refreshes it, ~15 s)."""
+    p = OUT / "verification.json"
+    if not p.exists():
+        p.write_text(json.dumps(verify.report(), indent=1))
+    res = json.loads(p.read_text())
+    res.pop("clips", None)
     return res
 
 

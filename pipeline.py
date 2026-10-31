@@ -1,4 +1,4 @@
-"""Run the full pipeline for one or more clips: perception -> timeline -> web proxy -> shift report.
+"""Run the full pipeline for one or more clips: perception -> temporal verification -> timeline -> web proxy -> shift report.
 
 Usage:
     python pipeline.py MTL-SGF00106-021 MTL-SGF00106-023        # by clip id
@@ -21,6 +21,7 @@ import insights  # noqa: E402
 import collaboration  # noqa: E402
 import social  # noqa: E402
 import timeline  # noqa: E402
+import verify  # noqa: E402
 import web_proxy  # noqa: E402
 
 RAW = ROOT / "data" / "raw"
@@ -34,6 +35,8 @@ def process(clip_id, stride=2, skip_existing=False):
     if not (skip_existing and (out / "hands.json").exists()):
         print(f"[{clip_id}] hand tracking + head motion ...")
         hands.run(video, stride=stride)
+        print(f"[{clip_id}] temporal verification (bridge flicker, reject blips) ...")
+        verify.apply(clip_id, fresh=True)
     print(f"[{clip_id}] timeline ...")
     timeline.build(clip_id, keyframes=True)
     if not (out / "social.json").exists():

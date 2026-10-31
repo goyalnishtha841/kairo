@@ -55,6 +55,8 @@ def load_signals(hands):
     pos = {h: np.full((len(fr), 2), np.nan) for h in ("L", "R")}
     for i, f in enumerate(fr):
         for hd in f["hands"]:
+            if hd.get("bridged"):  # verified presence, but interpolated: never motion evidence
+                continue
             lm = np.array(hd["lm"])
             pos[hd["id"]][i] = lm[[0, 5, 9, 13, 17], :2].mean(0)
     dt = np.gradient(t) if len(t) > 1 else np.ones_like(t)
@@ -117,6 +119,8 @@ def build(clip_id, keyframes=False):
     hands = json.loads((OUT / clip_id / "hands.json").read_text())
     fps = hands["fps"]
     t, n_hands, head, pan, pos, speed = load_signals(hands)
+    bridged_only = np.array([bool(f["hands"]) and all(h.get("bridged") for h in f["hands"])
+                             for f in hands["frames"]])
     hz = 1.0 / max(np.median(np.diff(t)), 1e-3)
     k = max(1, int(round(0.5 * hz)) | 1)
     vis = rolling_median(n_hands.astype(float), k) >= 0.5
@@ -193,7 +197,8 @@ def build(clip_id, keyframes=False):
 
         # hesitation: stall of 1-3 s between two movements, hands in view
         moving = speed_s[a:b + 1] > V_MOVE
-        stalled = speed_s[a:b + 1] < V_STALL
+        # bridged (interpolated) frames carry no speed evidence, so they never count as stalled
+        stalled = (speed_s[a:b + 1] < V_STALL) & ~bridged_only[a:b + 1]
         i = 0
         while i < len(stalled):
             if stalled[i]:

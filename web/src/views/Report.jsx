@@ -38,11 +38,54 @@ function Accuracy({ acc }) {
   );
 }
 
+function Verification({ v }) {
+  const t = v.total;
+  const rows = [
+    ["Precision", "drawn hands that really are the wearer's hand", "precision"],
+    ["Recall", "wearer's visible hands that were found", "recall"],
+    ["Frame presence", "frames where 'hands in view' is right", "frame_presence"],
+  ];
+  return (
+    <>
+      <h3 className="sec">Temporal verification (false-positive and flicker control)</h3>
+      <p>
+        A hand is accepted from its track over time, not from one frame. Dropouts up to {v.params.max_gap_s}s are bridged
+        when the motion is consistent (the hand reappears where it was heading, at the same size); one-frame detections
+        below {Math.round(v.params.solo_conf * 100)}% confidence are rejected. Hand flicker: <b>{t.flicker_before} → {t.flicker_after}</b> on/off
+        switches per minute (<b>−{t.flicker_reduction_pct}%</b>), {t.bridged.toLocaleString()} frames bridged, {t.rejected} blips rejected
+        out of {t.detections_in.toLocaleString()} detections.
+      </p>
+      <table className="tbl">
+        <thead><tr><th>Measure</th><th>What it means</th>
+          {v.tune && <><th>Tuning clips: raw</th><th>verified</th></>}
+          {v.heldout && <><th>Held-out clips: raw</th><th>verified</th></>}</tr></thead>
+        <tbody>
+          {rows.map(([name, desc, k]) => (
+            <tr key={k}>
+              <td>{name}</td><td className="muted">{desc}</td>
+              {v.tune && <><td>{pct(v.tune.before[k])}</td><td>{pct(v.tune.after[k])}</td></>}
+              {v.heldout && <><td>{pct(v.heldout.before[k])}</td><td><b>{pct(v.heldout.after[k])}</b></td></>}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="muted small">
+        Same human-labelled frames as above. Bridged hands count as found where a labelled hand was missed; ~29 of 32 bridged
+        skeletons were checked by eye to sit on a real hand (if none did, held-out recall would stay {pct(v.heldout?.after.recall_if_bridges_wrong)}).
+        {" "}{v.rejection_check} Rejecting longer or more confident short tracks was tested and removed real hands, so it is off.
+        Bridged frames count as hand presence only, never as motion evidence. Reproduce with <code>python perception/verify.py --report</code>.
+      </p>
+    </>
+  );
+}
+
 export default function Report({ report, clips, seek }) {
   const r = report;
   const f = r.friction;
   const [acc, setAcc] = useState(null);
+  const [ver, setVer] = useState(null);
   useEffect(() => { api.accuracy().then(setAcc).catch(() => {}); }, []);
+  useEffect(() => { api.verification().then(setVer).catch(() => {}); }, []);
   const metrics = clips.map((c) => c.metrics).filter((m) => m && m.clip_id);
   const avg = (k) => metrics.length ? metrics.reduce((a, m) => a + (m[k] || 0), 0) / metrics.length : null;
   const date = new Date().toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
@@ -110,6 +153,7 @@ export default function Report({ report, clips, seek }) {
       </table>
 
       {acc && <Accuracy acc={acc} />}
+      {ver && ver.total && <Verification v={ver} />}
       {metrics.length > 0 && (
         <>
           <h3 className="sec">Hand-tracking quality per clip</h3>
