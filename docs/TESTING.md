@@ -13,7 +13,7 @@ Kairo trains no neural network. It combines:
 | Step names | Qwen vision model on Groq (pretrained) | No |
 | Copilot | gpt-oss-120b on Groq (pretrained), tool calls over the timeline | No |
 
-In 24 hours with ~48 minutes of footage, training a model would overfit and be impossible to validate.
+In 24 hours with under an hour of footage, training a model would overfit and be impossible to validate.
 So we tune a handful of numbers on labelled data and test them on data we did not tune on.
 
 ## 2. Data we used
@@ -21,11 +21,11 @@ So we tune a handful of numbers on labelled data and test them on data we did no
 | Item | Amount |
 |---|---|
 | Footage available on the hackathon Drive | ~38 clips × 3 min ≈ 114 min (4 series) |
-| Downloaded and processed | 16 clips × 3 min = **48 min** (~1.7 GB, ~86,000 frames at 30 FPS) |
+| Downloaded and processed | 19 clips × 3 min = **57 min** (~2 GB, ~103,000 frames at 30 FPS) |
 | Frames the tracker analyses (every 2nd frame) | ~43,000 |
 | Series covered | SGF00106 (carpentry, chair frames), SKL00089 (sorting / assembly at a table), mytronlabs-000003 (grinder / chisel work), mytronlabs-000060 |
 | Human-labelled frames, **tuning set** | 90 frames from 15 clips (119 visible wearer hands) |
-| Human-labelled frames, **held-out test set** | frames from 4 clips never used in tuning: SKL00089-008, SKL00089-011, mytronlabs-000003-003, mytronlabs-000060-008 |
+| Human-labelled frames, **held-out test set** | 48 frames from 3 clips never used in tuning: SKL00089-011, mytronlabs-000003-003, mytronlabs-000060-008 |
 
 Footage stays on the laptop and is never committed (data rules). Only numbers (landmarks, labels, metrics) are in the repo.
 
@@ -61,17 +61,17 @@ and **frame presence** ("hands in view?" right or wrong).
 
 ```bash
 python eval/accuracy.py sample                    # tuning set (already done)
-python eval/accuracy.py sample --set heldout SKL00089-008 ...   # held-out set
+python eval/accuracy.py sample --set heldout MTL-SKL00089-011 ...   # held-out set
 #   look at outputs/eval/*grid_*.jpg, fill eval/[heldout_]labels.json
 python eval/accuracy.py score [--set heldout]     # -> outputs/accuracy[_heldout].json, shown in the Shift Report
 ```
 
-## 4. Automated tests (60, run with `python -m pytest tests -q`)
+## 4. Automated tests (87, run with `python -m pytest tests -q`)
 
 | Suite | File | What it checks |
 |---|---|---|
 | End to end | `tests/test_e2e.py` (8) | Cuts a real 25 s clip and runs the whole pipeline. Checks that every output file exists, tracking quality (confidence, smoothing reduces jitter, FPS), valid landmarks, that the web video is H.264, the keyframes, and that the API serves the new clip: timeline, hands, video range requests, report, copilot. Checks the UI is served. **Uploads a video through the API and waits for the background worker.** |
-| Data contracts | `tests/test_contracts.py` (32) | Every processed clip's timeline: valid event types and times, unique ids, states that cover the clip without overlaps, ordered steps. Insights maths: the breakdown sums to 100%, lost ≥ recoverable, recommendations sorted, **every piece of evidence points at a real event**, and extrapolation scales with shift length. |
+| Data contracts | `tests/test_contracts.py` (59) | Every processed clip (19)'s timeline: valid event types and times, unique ids, states that cover the clip without overlaps, ordered steps. Insights maths: the breakdown sums to 100%, lost ≥ recoverable, recommendations sorted, **every piece of evidence points at a real event**, and extrapolation scales with shift length. |
 | AI | `tests/test_ai.py` (12) | The rules copilot answers 6 question types with citations to real clips and times. Citation clean-up handles LLM output. **Live Groq answers are grounded** (skipped without a key). The comparator scores a clip vs itself at 100%, and catches a missing, a swapped and a slower step in a synthetic case. |
 | Units and safety | `tests/test_units.py` (8) | Hand identity survives label flips. The Left/Right geometry works. The ego-hand threshold works. One-Euro reduces jitter without lag. Head-motion direction is right. The API rejects path traversal, unknown clips and non-video uploads. |
 

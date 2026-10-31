@@ -19,7 +19,7 @@ events/       timeline.py (states, friction, SOP steps), insights.py (savings), 
 ai/           copilot.py (Groq -> Claude -> rules), sop_labels.py (vision step names), env.py
 server/       FastAPI: /api/clips, /api/clips/{id}/timeline|hands, /api/report, /api/ask, /media
 web/          React + Vite UI: Analyze · SOP · Compare · Layout & Savings · Shift Report · Clips
-tests/        59 integration + unit tests (python -m pytest tests -q)
+tests/        87 integration + unit tests (python -m pytest tests -q)
 schema/       timeline contract + mock_timeline.json
 pipeline.py   runs everything for one or more clips
 ```

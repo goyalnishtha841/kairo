@@ -13,9 +13,9 @@ Before going on stage:
 | 1:05 | Copilot: "Where did the worker search for tools?" | Click a ▶ timestamp. "It can only query the timeline, so every answer links to the moment." |
 | 1:25 | **SOP** tab | "The video writes its own SOP: steps, keyframes, tools, named by a vision model." |
 | 1:40 | **Compare** tab | Reference vs check: "missing, out-of-order and slower steps, with an adherence score." |
-| 2:00 | **Layout & Savings** | Read the headline: "~N min per shift by staging tools in the front zone, based on M minutes of footage." Click one evidence chip. |
-| 2:25 | **Shift Report**, scroll to accuracy | "We hand-labelled 90 frames: precision, recall and left/right before and after tuning." |
-| 2:45 | Deck: tested, close | "60 automated tests on real footage. Kairo turns footage nobody watches into fixes a factory can make tomorrow." |
+| 2:00 | **Layout & Savings** | Read the headline: "about 60 min per shift recoverable; the biggest levers are cutting waiting (~28 min) and staging tools in the front zone (~15 min), based on 57 minutes of footage." Click one evidence chip. |
+| 2:25 | **Shift Report**, scroll to accuracy | "We hand-labelled 138 frames. On clips we never tuned on: 91% precision, 59% recall, and 93% left/right, up from 47%." |
+| 2:45 | Deck: tested, close | "87 automated tests on real footage. Kairo turns footage nobody watches into fixes a factory can make tomorrow." |
 
 Likely questions:
 - **How accurate is the tracking?** Shift Report → accuracy table (`python eval/accuracy.py score` reproduces it).

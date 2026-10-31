@@ -134,24 +134,31 @@ flowchart TB
 
 ## 5. Hand-tracking quality (scored by the judges)
 
-Measured on the real clips; the Shift Report shows these per clip:
+Measured with frames labelled by hand (`eval/accuracy.py`). The Shift Report shows these numbers.
 
-- **Speed:** about 25 FPS on the laptop CPU (640 px, every 2nd frame), with no GPU.
-- **Mean confidence:** about 0.9.
-- **Jitter:** the One-Euro filter removes 27–39% of frame-to-frame jitter.
-- **Other people's hands:** around 150 detections per clip are rejected by the ego-hand filter.
-- **Frames with hands:** 35–60%. In the frames without hands, the worker is looking away from the work. We checked those frames by hand, and the timeline counts that time as search or idle.
+| Measure | Before tuning | After tuning (tuning clips) | **Unseen clips (held-out)** |
+|---|---|---|---|
+| Precision | 92% | 91% | **91%** (whole-video estimate) |
+| Recall | 46% | 57% | **59%** (whole-video estimate) |
+| Left / right correct | 47% | 78% | **93%** |
+| Jitter removed by One-Euro | – | ~40% | ~35% |
 
-## 6. What we tested (59 automated tests, all passing)
+- **Tuning set:** 90 frames from 15 clips. We used it to choose the detection threshold and the left/right rule.
+- **Held-out set:** 48 frames from 3 clips we never looked at while tuning. That's the honest number.
+- **Speed:** about 20 FPS on a laptop CPU (640 px, every 2nd frame), with no GPU.
+- **Other people's hands:** about 300 detections per clip are rejected by the ego-hand filter.
+- **Remaining misses:** very close-up hands (at the grinder) and hands cut off at the top or bottom edge of the fisheye frame.
+
+## 6. What we tested (87 automated tests, all passing)
 
 Run them with `python -m pytest tests -q`.
 
 | Suite | What it proves | Tests |
 |---|---|---|
 | **End-to-end** (`test_e2e.py`) | Cuts a real 25 s clip and runs the full pipeline. Checks that every artifact exists and that hand tracking meets quality bars (confidence, smoothing, FPS). Checks the landmarks are valid, the web video is H.264 and playable, the keyframes exist, the API serves the new clip (timeline, hands, video range requests, report, copilot), and the UI is served. It also **uploads a video through the API and waits for the background worker** to finish it. | 8 |
-| **Contracts** (`test_contracts.py`) | For every processed clip: valid event types and time bounds, unique ids, states that are contiguous and cover the clip, ordered steps. Insights math: the breakdown sums to 100%, lost ≥ recoverable, recommendations are sorted, **every piece of evidence points at a real event**, and shift extrapolation scales correctly. | 32 |
+| **Contracts** (`test_contracts.py`) | For every processed clip (19 clips): valid event types and time bounds, unique ids, states that are contiguous and cover the clip, ordered steps. Insights math: the breakdown sums to 100%, lost ≥ recoverable, recommendations are sorted, **every piece of evidence points at a real event**, and shift extrapolation scales correctly. | 59 |
 | **AI** (`test_ai.py`) | The rules copilot answers 6 question types with citations that point at real clips and times. Citation clean-up handles odd LLM output. **Live Groq answers are grounded** (citations valid). Comparing a clip with itself gives 100%. On a synthetic case, the comparator **catches a missing step, a swapped order and a slower step**. | 12 |
-| **Units** (`test_units.py`) | Hand identity survives label flips. The label wins after a long gap. The ego-hand threshold works. One-Euro reduces jitter without lag. Head-motion direction is correct. The API rejects path traversal, unknown clips and non-video uploads. | 7 |
+| **Units** (`test_units.py`) | Hand identity survives label flips. The label wins after a long gap. The ego-hand threshold works. One-Euro reduces jitter without lag. Head-motion direction is correct. The API rejects path traversal, unknown clips and non-video uploads. | 8 |
 
 Bugs these tests caught and we fixed: a copilot regression where a field was renamed, and a crash in the
 UI chat. Other bugs found by testing in the browser: coworkers' hands being counted as work, links that
