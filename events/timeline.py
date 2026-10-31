@@ -32,6 +32,7 @@ MIN_STEP_S = 2.0
 # hand speed in frame-widths/s; calibrated on SGF00106 (median 0.08, p75 0.15 while hands visible)
 V_MOVE = 0.10            # counts as moving
 V_STALL = 0.03           # below this the hand is stalled
+MIN_STALL_SEEN = 0.7     # share of a stall the hand must be measured in (else it is a dropout)
 FRICTION = {"search", "transit", "idle", "hesitation", "extra_reach", "reattempt"}
 SEVERITY = {"search": "red", "transit": "red", "idle": "yellow", "hesitation": "yellow",
             "extra_reach": "yellow", "reattempt": "yellow"}
@@ -199,6 +200,9 @@ def build(clip_id, keyframes=False):
         moving = speed_s[a:b + 1] > V_MOVE
         # bridged (interpolated) frames carry no speed evidence, so they never count as stalled
         stalled = (speed_s[a:b + 1] < V_STALL) & ~bridged_only[a:b + 1]
+        measured = np.zeros(b - a + 1, bool)
+        for h in pos:
+            measured |= ~np.isnan(pos[h][a:b + 1, 0])
         i = 0
         while i < len(stalled):
             if stalled[i]:
@@ -208,7 +212,10 @@ def build(clip_id, keyframes=False):
                 d = t[a + j] - t[a + i]
                 before = moving[max(0, i - int(hz)):i].any()
                 after = moving[j + 1:j + 1 + int(hz)].any()
-                if 1.0 <= d <= 3.0 and before and after:
+                # a stall is only a hesitation if the hand was actually measured through it;
+                # otherwise it is a tracking dropout (speed reads 0 where the hand is not detected)
+                seen = float(np.mean(measured[i:j + 1]))
+                if 1.0 <= d <= 3.0 and before and after and seen >= MIN_STALL_SEEN:
                     add("hesitation", a + i, a + j, step_id=sid, hand=dom,
                         conf=0.55, note=f"hand stalled {d:.1f}s between movements")
                 i = j + 1

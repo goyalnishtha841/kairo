@@ -22,7 +22,7 @@ ai/           copilot.py (Groq -> Claude -> rules), sop_labels.py (vision step n
 server/       FastAPI: /api/clips, /api/clips/{id}/timeline|hands, /api/report, /api/ask, /api/proficiency,
               /api/simulate, /api/compare, /api/accuracy, /api/upload, /api/process, /media
 web/          React + Vite HUD: Analyze · Impact · Proficiency · SOP · Compare · Shift Report · Clips
-tests/        139 integration + unit tests (python -m pytest tests -q)
+tests/        140 integration + unit tests (python -m pytest tests -q)
 schema/       timeline contract + mock_timeline.json
 pipeline.py   runs everything for one or more clips
 ```

@@ -30,6 +30,7 @@ MAX_SPEED = 4.0           # frame widths/s: a palm moving faster than this betwe
 MAX_GAP_S = 0.6           # longest dropout we bridge (bridges checked by eye: ~29/32 sit on a real hand)
 LINK_TOL = 0.06           # frame widths: allowed miss of the constant-velocity prediction ...
 LINK_TOL_PER_S = 0.5      # ... growing with the gap length
+MIN_LINK_OBS = 2          # both sides of a bridge need this many detections (evidence for the motion)
 SCALE_RATIO = 1.5         # palm size may change by at most this factor across a gap
 MIN_OBS = 2               # detections a track needs to be accepted ...
 SOLO_CONF = 0.7           # ... unless its best detection is at least this confident.
@@ -80,6 +81,8 @@ def _velocity(seq, t, idx):
 
 def consistent(seq, t, a, b):
     """Can tracklet b continue tracklet a? (short gap, on the predicted path, similar palm size)"""
+    if min(len(a), len(b)) < MIN_LINK_OBS:   # a one-frame piece has no velocity to check against
+        return False
     i, j = a[-1], b[0]
     gap = t[j] - t[i]
     if gap > MAX_GAP_S + 1e-6:
@@ -103,10 +106,13 @@ def verify_hand(seq, t):
             tracks.append([p])
     new = [None] * len(seq)
     stats = {"rejected": 0, "bridged": 0, "tracks": 0, "linked_gaps": 0}
+    seen = [i for i, h in enumerate(seq) if h is not None]
     for tr in tracks:
         idx = [i for p in tr for i in p]
         best = max(seq[i]["score"] for i in idx)
-        if len(idx) < MIN_OBS and best < SOLO_CONF:
+        # isolated: no other detection of this hand within MAX_GAP_S
+        near = [k for k in seen if k not in idx and min(abs(t[k] - t[idx[0]]), abs(t[k] - t[idx[-1]])) <= MAX_GAP_S]
+        if len(idx) < MIN_OBS and best < SOLO_CONF and not near:
             stats["rejected"] += len(idx)
             continue
         stats["tracks"] += 1
@@ -249,8 +255,9 @@ def report(clips=None):
     tot["flicker_reduction_pct"] = round(100 * (1 - tot["flicker_after"] / tot["flicker_before"]))         if tot["flicker_before"] else None
     out = {"clips": per, "total": tot,
            "params": {"max_gap_s": MAX_GAP_S, "min_obs": MIN_OBS, "solo_conf": SOLO_CONF, "max_speed": MAX_SPEED},
-           "rejection_check": "16 random rejected blips checked by eye: ~13 were not the wearer's hand "
-                              "(chairs, wood, a box, coworkers' hands), ~3 were real hands."}
+           "rejection_check": "Only isolated blips are rejected (no other detection of that hand within the gap). "
+                              "Under a broader version of the rule, 16 random rejections were checked by eye: ~13 were not "
+                              "the wearer's hand (chairs, wood, a box, coworkers' hands)."}
     for name, pre in (("tune", ""), ("heldout", "heldout_")):
         if (EVAL / f"{pre}labels.json").exists():
             out[name] = label_check(pre)

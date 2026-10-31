@@ -4,6 +4,7 @@ Usage:
     python pipeline.py MTL-SGF00106-021 MTL-SGF00106-023        # by clip id
     python pipeline.py --all                                     # every clip in data/raw
     python pipeline.py --all --skip-existing
+    python pipeline.py --all --rebuild                           # re-derive timelines from stored tracks
 """
 import argparse
 import json
@@ -53,19 +54,36 @@ def process(clip_id, stride=2, skip_existing=False):
     web_proxy.make_proxy(video)
 
 
+def rebuild(clip_id):
+    """Re-derive a processed clip from its stored tracks (no video re-tracking, no captioning API):
+    temporal verification -> timeline -> collaboration, keeping existing step captions where steps match."""
+    old = json.loads((OUT / clip_id / "timeline.json").read_text())["steps"]
+    verify.apply(clip_id)
+    tl = timeline.build(clip_id, keyframes=True)
+    kept = sop_labels.carry_over(old, tl["steps"])
+    (OUT / clip_id / "timeline.json").write_text(json.dumps(tl, indent=1))
+    collaboration.apply(clip_id)
+    print(f"[{clip_id}] rebuilt: {len(tl['steps'])} steps, {kept} captions kept")
+    return kept, len(tl["steps"])
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("clips", nargs="*")
     ap.add_argument("--all", action="store_true")
     ap.add_argument("--skip-existing", action="store_true")
     ap.add_argument("--stride", type=int, default=2)
+    ap.add_argument("--rebuild", action="store_true", help="re-derive timelines of processed clips from stored tracks")
     ap.add_argument("--no-captions", action="store_true", help="skip LLM step names (run ai/recaption.py later)")
     a = ap.parse_args()
     if a.no_captions:
         ENGINE = "rules"
     clips = sorted(p.stem for p in RAW.glob("*.mp4")) if a.all else a.clips
     for c in clips:
-        process(c, a.stride, a.skip_existing)
+        if a.rebuild:
+            rebuild(c)
+        else:
+            process(c, a.stride, a.skip_existing)
     done = sorted(p.parent.name for p in OUT.glob("*/timeline.json"))
     report = insights.analyse(done)
     (OUT / "shift_report.json").write_text(json.dumps(report, indent=1))

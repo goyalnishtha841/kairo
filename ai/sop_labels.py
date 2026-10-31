@@ -100,6 +100,23 @@ def caption_clip(clip_id, engine="groq", force=False):
     return len(items)
 
 
+
+def carry_over(old_steps, new_steps, min_overlap=0.5):
+    """After a timeline rebuild, keep captions of old steps that cover most of a new step (no API call).
+    Steps without a match keep their motion name and are captioned by ai/recaption.py later."""
+    kept = 0
+    for s in new_steps:
+        dur = max(s["t_end"] - s["t_start"], 1e-6)
+        best = max(old_steps, default=None, key=lambda o: min(o["t_end"], s["t_end"]) - max(o["t_start"], s["t_start"]))
+        if best is None or not best.get("captioned"):
+            continue
+        if (min(best["t_end"], s["t_end"]) - max(best["t_start"], s["t_start"])) / dur >= min_overlap:
+            s["motion_label"] = s["label"]
+            s["label"], s["tool"], s["captioned"] = best["label"], best.get("tool"), True
+            kept += 1
+    return kept
+
+
 if __name__ == "__main__":
     import copilot
 

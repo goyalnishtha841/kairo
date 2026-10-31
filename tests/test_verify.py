@@ -100,17 +100,39 @@ def test_verification_never_loses_more_than_it_rejects():
 
 
 @needs_data
-def test_raw_tracks_reproduce_the_saved_timeline(tmp_path, monkeypatch):
-    """Verification is opt-in per clip: unverified tracks still give the timeline on disk."""
+def test_saved_timeline_is_built_from_verified_tracks(tmp_path, monkeypatch):
+    """hands.json holds the verified tracks (detector output kept in hands_raw.json) and the saved timeline matches them."""
     clip = CLIPS[0]
+    assert (OUT / clip / "hands_raw.json").exists()
+    assert json.loads((OUT / clip / "hands.json").read_text())["frames"] == V.verify_frames(V.raw_frames(clip))[0]
     (tmp_path / clip).mkdir()
-    (tmp_path / clip / "hands.json").write_text(json.dumps({**json.loads((OUT / clip / "hands.json").read_text()),
-                                                            "frames": V.raw_frames(clip)}))
+    (tmp_path / clip / "hands.json").write_text((OUT / clip / "hands.json").read_text())
     monkeypatch.setattr(timeline, "OUT", tmp_path)
     saved = json.loads((OUT / clip / "timeline.json").read_text())
-    if any(f["hands"] and f["hands"][0].get("bridged") for f in json.loads((OUT / clip / "hands.json").read_text())["frames"]):
-        pytest.skip("this clip's saved timeline was built from verified tracks")
     assert timeline.build(clip)["states"] == saved["states"]
+
+
+def test_hesitation_needs_a_measured_hand():
+    """A 'stall' where the hand is simply not detected is a tracking dropout, not a hesitation."""
+    def run(stall):
+        moving = [hand(0.2 + 0.03 * i) for i in range(20)]
+        back = [hand(0.8 - 0.03 * i) for i in range(20)]
+        return [e for e in _timeline(moving + stall + back)["events"] if e["type"] == "hesitation"]
+    assert run([hand(0.8)] * 25)            # hand seen, still for ~1.7 s -> hesitation
+    assert not run([None] * 25)             # hand not seen -> no hesitation
+
+
+def _timeline(track):
+    import tempfile
+    from pathlib import Path
+    d = Path(tempfile.mkdtemp())
+    (d / "x").mkdir()
+    (d / "x" / "hands.json").write_text(json.dumps({"fps": 30.0, "duration_s": len(track) / FS, "frames": frames(track)}))
+    old, timeline.OUT = timeline.OUT, d
+    try:
+        return timeline.build("x")
+    finally:
+        timeline.OUT = old
 
 
 @pytest.mark.skipif(not (OUT.parent / "eval" / "heldout_labels.json").exists(), reason="needs labels")

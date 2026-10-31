@@ -39,7 +39,7 @@ Added in the principal-engineer round (see [STRATEGY.md](STRATEGY.md)):
 |---|---|---|
 | **Recommendation engine v2** | Each fix is an evidence record: observation, evidence statistics, confidence (the formula is shown), minutes per shift, **EUR per year**, supporting clips, and a **before/after simulation** of the timeline with that waste removed. | Impact tab |
 | **Workflow Proficiency Engine** | Each recording is compared with its station's baseline (leave-one-out median, robust z-scores) and gets an explainable 0-100 score, a skill fingerprint radar, and a score across recordings. It describes the workflow, never a person. | Proficiency tab |
-| **Temporal Verification** | A hand is accepted from its track over time, not from one frame. Dropouts up to 0.6 s are bridged when the motion is consistent (the hand reappears where it was heading, at the same size); one-frame detections below 70% confidence are rejected. Hand flicker drops 56%; on held-out human labels recall rises from 40% to 62% (~59% counting the bridges that missed) with precision 88% to 92%. Bridged frames count as presence only, never as motion evidence. | Shift Report |
+| **Temporal Verification** | A hand is accepted from its track over time, not from one frame. Dropouts up to 0.6 s are bridged when the motion is consistent (the hand reappears where it was heading, at the same size, and both sides have at least two detections); isolated one-frame detections below 70% confidence are rejected. Hand flicker drops 28%; on held-out human labels recall rises from 40% to 49% with precision 88% to 90%. All timelines are built from verified tracks; hesitations need the hand to be measured through the stall (81 of the old hesitations were mostly tracking dropouts; 8 remain). Bridged frames count as presence only, never as motion evidence. | Shift Report |
 | **Motion Skill Profiler** | Learns, without labels, what practised hand motion looks like at each station: trajectory smoothness (SPARC), hand speed, corrections (sub-movements), repeated grasps, motion entropy, idle time and looking around, with head motion subtracted from the hand tracks. Recordings are clustered into Expert-like / Developing / Beginner-like, each with an expertise index, a motion fingerprint and timestamped evidence. It describes the motion in a recording, never a person. | Skill Profile tab |
 | **Collaboration Intelligence** | A precision-first detector of collaboration events from a coworker being close and facing the wearer, voice activity, and a pause in work. It never claims what was said. | Analyze timeline (blue), Shift Report |
 
@@ -159,7 +159,7 @@ Measured with frames labelled by hand (`eval/accuracy.py`). The Shift Report sho
 - **Other people's hands:** about 300 detections per clip are rejected by the ego-hand filter.
 - **Remaining misses:** very close-up hands (at the grinder) and hands cut off at the top or bottom edge of the fisheye frame.
 
-## 6. What we tested (139 automated tests, all passing)
+## 6. What we tested (140 automated tests, all passing)
 
 Run them with `python -m pytest tests -q`.
 
