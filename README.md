@@ -14,12 +14,15 @@ See [docs/OVERVIEW.md](docs/OVERVIEW.md) for the problem statement and architect
 
 ## Layout
 ```
-perception/   hands.py (MediaPipe + L/R identity + One-Euro + metrics), ego_motion.py, web_proxy.py
-events/       timeline.py (states, friction, SOP steps), insights.py (savings), compare.py (SOP comparator)
+perception/   hands.py (MediaPipe + L/R identity + One-Euro + metrics), ego_motion.py, social.py (people, faces, voice activity), web_proxy.py
+events/       timeline.py (states, friction, SOP steps), insights.py (shift report), recommend.py (evidence,
+              confidence, ROI, simulation), proficiency.py (workflow vs station baseline), collaboration.py
+              (precision-first collaboration events), compare.py (SOP comparator), config.py (EUR, thresholds)
 ai/           copilot.py (Groq -> Claude -> rules), sop_labels.py (vision step names), env.py
-server/       FastAPI: /api/clips, /api/clips/{id}/timeline|hands, /api/report, /api/ask, /media
-web/          React + Vite UI: Analyze · SOP · Compare · Layout & Savings · Shift Report · Clips
-tests/        87 integration + unit tests (python -m pytest tests -q)
+server/       FastAPI: /api/clips, /api/clips/{id}/timeline|hands, /api/report, /api/ask, /api/proficiency,
+              /api/simulate, /api/compare, /api/accuracy, /api/upload, /api/process, /media
+web/          React + Vite HUD: Analyze · Impact · Proficiency · SOP · Compare · Shift Report · Clips
+tests/        115 integration + unit tests (python -m pytest tests -q)
 schema/       timeline contract + mock_timeline.json
 pipeline.py   runs everything for one or more clips
 ```

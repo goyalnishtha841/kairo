@@ -152,7 +152,7 @@ Scored 1–5 (effort: 5 = cheapest).
 | 1:55 | **Proficiency**: fingerprint radar | "Each recording is compared with the station's baseline: where this workflow deviates, and by how much. The workflow, not the worker." |
 | 2:15 | **Collaboration** events | "Only high-confidence collaboration: another person close, facing, voice activity, work paused, then resumed. We would rather miss one than invent one." |
 | 2:30 | **Shift Report** accuracy table | "Measured on clips we never tuned on: 91% precision, 93% left/right." |
-| 2:45 | Close | "On a laptop, on-site, today: about €X per station per year. Kairo turns footage nobody watches into fixes you can make tomorrow." |
+| 2:45 | Close | "On a laptop, on-site, today: about €16,000 per station per year. Kairo turns footage nobody watches into fixes you can make tomorrow." |
 
 ## 6. Twenty hard judge questions
 

@@ -33,6 +33,14 @@ there. It never ranks or scores individual workers.
 
 Plus a **Clips** tab where you can upload a new video or process downloaded clips and watch the job status.
 
+Added in the principal-engineer round (see [STRATEGY.md](STRATEGY.md)):
+
+| Module | What it gives you | Where |
+|---|---|---|
+| **Recommendation engine v2** | Each fix is an evidence record: observation, evidence statistics, confidence (the formula is shown), minutes per shift, **EUR per year**, supporting clips, and a **before/after simulation** of the timeline with that waste removed. | Impact tab |
+| **Workflow Proficiency Engine** | Each recording is compared with its station's baseline (leave-one-out median, robust z-scores) and gets an explainable 0-100 score, a skill fingerprint radar, and a score across recordings. It describes the workflow, never a person. | Proficiency tab |
+| **Collaboration Intelligence** | A precision-first detector of collaboration events from a coworker being close and facing the wearer, voice activity, and a pause in work. It never claims what was said. | Analyze timeline (blue), Shift Report |
+
 ## 3. Architecture
 
 ```mermaid
@@ -149,7 +157,7 @@ Measured with frames labelled by hand (`eval/accuracy.py`). The Shift Report sho
 - **Other people's hands:** about 300 detections per clip are rejected by the ego-hand filter.
 - **Remaining misses:** very close-up hands (at the grinder) and hands cut off at the top or bottom edge of the fisheye frame.
 
-## 6. What we tested (87 automated tests, all passing)
+## 6. What we tested (115 automated tests, all passing)
 
 Run them with `python -m pytest tests -q`.
 

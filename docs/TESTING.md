@@ -66,13 +66,16 @@ python eval/accuracy.py sample --set heldout MTL-SKL00089-011 ...   # held-out s
 python eval/accuracy.py score [--set heldout]     # -> outputs/accuracy[_heldout].json, shown in the Shift Report
 ```
 
-## 4. Automated tests (87, run with `python -m pytest tests -q`)
+## 4. Automated tests (115, run with `python -m pytest tests -q`)
 
 | Suite | File | What it checks |
 |---|---|---|
 | End to end | `tests/test_e2e.py` (8) | Cuts a real 25 s clip and runs the whole pipeline. Checks that every output file exists, tracking quality (confidence, smoothing reduces jitter, FPS), valid landmarks, that the web video is H.264, the keyframes, and that the API serves the new clip: timeline, hands, video range requests, report, copilot. Checks the UI is served. **Uploads a video through the API and waits for the background worker.** |
 | Data contracts | `tests/test_contracts.py` (59) | Every processed clip (19)'s timeline: valid event types and times, unique ids, states that cover the clip without overlaps, ordered steps. Insights maths: the breakdown sums to 100%, lost ≥ recoverable, recommendations sorted, **every piece of evidence points at a real event**, and extrapolation scales with shift length. |
 | AI | `tests/test_ai.py` (12) | The rules copilot answers 6 question types with citations to real clips and times. Citation clean-up handles LLM output. **Live Groq answers are grounded** (skipped without a key). The comparator scores a clip vs itself at 100%, and catches a missing, a swapped and a slower step in a synthetic case. |
+| Recommendations | `tests/test_recommend.py` (6) | Confidence grows with evidence and spread, consistency beats erratic durations, the ROI formula, full evidence records sorted by ROI, simulation removes exactly the recoverable share and shifts later time, and the simulate API. |
+| Proficiency | `tests/test_proficiency.py` (7) | Baseline is leave-one-out and same-station, every point is explained, below-baseline metrics cite timestamps, the median workflow scores near 50, more friction scores lower, levels follow the config, and the API. |
+| Collaboration | `tests/test_collaboration.py` (11) | **No event** for: a worker passing, crossing close, standing silently while work continues, talking while working independently, a noisy environment with nobody there, or a one-frame flicker. **Detected** for: real collaboration (confirmed, ≥0.90), the same without speech (only "possible"), and occluded faces (one event, not split). The speech threshold adapts to noise, and writing to the timeline is idempotent. |
 | Units and safety | `tests/test_units.py` (8) | Hand identity survives label flips. The Left/Right geometry works. The ego-hand threshold works. One-Euro reduces jitter without lag. Head-motion direction is right. The API rejects path traversal, unknown clips and non-video uploads. |
 
 ## 5. How to test it yourself (manual checklist)
