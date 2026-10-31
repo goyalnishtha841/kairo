@@ -24,7 +24,7 @@ MODEL = "claude-opus-5-5"
 GROQ_MODEL = "openai/gpt-oss-120b"
 CITE_RE = re.compile(r"\[([\w.-]+)@(\d{1,2}):(\d{2})\]")
 LABELS = {"search": "searching", "transit": "walking away / fetching", "idle": "idle",
-          "hesitation": "hesitation", "extra_reach": "extra reach",
+          "hesitation": "hesitation", "extra_reach": "extra reach", "reattempt": "repeated correction",
           "collaboration": "collaboration", "possible_collaboration": "possible collaboration"}
 
 
@@ -179,7 +179,8 @@ def answer_rules(q, ctx):
                        ("transit", ("walk", "transit", "away", "fetch")),
                        ("idle", ("idle", "wait")),
                        ("hesitation", ("hesitat", "stall", "pause")),
-                       ("extra_reach", ("reach",))):
+                       ("extra_reach", ("reach",)),
+                       ("reattempt", ("reattempt", "redo", "retry", "correction", "regrasp"))):
         if any(w in ql for w in words):
             evs = ctx.events(type=typ, limit=500)
             if not evs:
@@ -232,7 +233,8 @@ TOOLS = [
     {"name": "get_summary", "description": "Time breakdown, friction totals, lost minutes per shift and ranked "
      "recommendations for the selected clips.", "input_schema": {"type": "object", "properties": {}}},
     {"name": "list_events", "description": "Timeline events. type is one of search, transit, idle, hesitation, "
-     "extra_reach, collaboration, possible_collaboration (omit for all). Times are seconds from clip start.",
+     "extra_reach, reattempt, collaboration, possible_collaboration (omit for all). Times are seconds from clip "
+     "start.",
      "input_schema": {"type": "object", "properties": {
          "type": {"type": ["string", "null"]}, "clip_id": {"type": ["string", "null"]},
          "limit": {"type": ["integer", "null"]}}}},

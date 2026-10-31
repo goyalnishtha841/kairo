@@ -65,7 +65,7 @@ function FrictionTimeline({ timeline, now, onSeek }) {
         <div className="ftl-now" style={{ left: pct(now) }} />
       </div>
       <div className="ftl-marks">
-        {friction.filter((e) => ["hesitation", "extra_reach"].includes(e.type)).map((e) => (
+        {friction.filter((e) => ["hesitation", "extra_reach", "reattempt"].includes(e.type)).map((e) => (
           <div key={e.id} className="ftl-mark" style={{ left: pct(e.t_start) }} title={`${LABEL[e.type]}: ${e.note}`}
                onClick={() => onSeek(e.t_start)} />
         ))}
@@ -85,7 +85,7 @@ function FrictionTimeline({ timeline, now, onSeek }) {
         {["work", "search", "transit", "idle"].map((k) => (
           <span key={k}><i style={{ background: COLOR[k] }} />{LABEL[k]}</span>
         ))}
-        <span><i className="dot" />Hesitation / extra reach</span>
+        <span><i className="dot" />Hesitation / extra reach / repeated correction</span>
         <span><i style={{ background: "var(--blue)" }} />Collaboration</span>
         <span className="muted">Numbered blocks = SOP steps</span>
       </div>
@@ -140,7 +140,7 @@ export default function Analyze({ clip, timeline, videoRef, onVideoReady, seek, 
             <h3>Events <span className="muted">({friction.length})</span></h3>
             <select value={filter} onChange={(e) => setFilter(e.target.value)}>
               <option value="all">All</option>
-              {["search", "transit", "idle", "hesitation", "extra_reach", "collaboration", "possible_collaboration"].map((k) => <option key={k} value={k}>{LABEL[k]}</option>)}
+              {["search", "transit", "idle", "hesitation", "extra_reach", "reattempt", "collaboration", "possible_collaboration"].map((k) => <option key={k} value={k}>{LABEL[k]}</option>)}
             </select>
           </div>
           <div className="evlist">

@@ -19,7 +19,7 @@ STOP = {"a", "an", "the", "with", "of", "to", "into", "and", "on", "in", "piece"
 GAP = -0.35          # cost of a missing/extra step
 MATCH_MIN = 0.34     # similarity above which two steps are "the same step"
 SLOW_PCT = 40        # duration difference that counts as notably slower/faster
-FRICTION = ("search", "transit", "idle", "hesitation", "extra_reach")
+FRICTION = ("search", "transit", "idle", "hesitation", "extra_reach", "reattempt")
 
 
 def load(clip_id):
@@ -129,7 +129,8 @@ def compare(ref_id, tgt_id):
         elif x["status"] == "slower":
             findings.append(f"Slower: \"{x['ref']['label']}\" took {x['target']['duration_s']:.0f}s vs "
                             f"{x['ref']['duration_s']:.0f}s (+{x['delta_pct']}%) {c(x['target']['t_start'])}.")
-    for k, label in (("search", "searching"), ("idle", "idle time"), ("hesitation", "hesitation")):
+    for k, label in (("search", "searching"), ("idle", "idle time"), ("hesitation", "hesitation"),
+                     ("reattempt", "repeated corrections")):
         if fr_tgt[k] - fr_ref[k] >= 2:
             findings.append(f"More {label}: {fr_tgt[k]}s/min vs {fr_ref[k]}s/min in the reference.")
 

@@ -9,13 +9,15 @@ import statistics
 
 import config as C
 
-KIND = {"search": "layout", "transit": "flow", "idle": "flow", "hesitation": "method", "extra_reach": "layout"}
+KIND = {"search": "layout", "transit": "flow", "idle": "flow", "hesitation": "method", "extra_reach": "layout",
+        "reattempt": "method"}
 TITLE = {
     "search": "Stage frequently used tools in the front work zone",
     "transit": "Kit materials at the station before each build",
     "idle": "Remove waiting time",
     "hesitation": "Add a jig or visual guide where hands hesitate",
     "extra_reach": "Shorten reach paths",
+    "reattempt": "Fix the part in place to stop repeated re-grasps",
 }
 ACTION = {
     "search": "Put a shadow board or tool cart within arm's reach in front of the work piece.",
@@ -23,6 +25,8 @@ ACTION = {
     "idle": "Check material supply and machine availability at these moments; pre-stage the next job.",
     "hesitation": "Add a reference stop, jig or marked position for the alignment steps.",
     "extra_reach": "Move parts and tools so the hand path is short and straight.",
+    "reattempt": "Add a clamp, jig or snap-fit so the part doesn't need to be picked up and put down "
+                 "again mid-step.",
 }
 
 
@@ -56,6 +60,9 @@ def observation(typ, n, total, mean, search_dirs):
         return f"Hands are out of view with the head still {n} times, {mean:.1f}s on average (waiting or talking)."
     if typ == "hesitation":
         return f"The hand stalls mid-task {n} times, {mean:.1f}s on average, typical of alignment without a reference."
+    if typ == "reattempt":
+        return (f"The hand picks the same part up and puts it back down {n} times without finishing the step, "
+                f"{mean:.1f}s on average — hidden rework the worker rarely notices themself.")
     return f"{n} hand movements took a path over 3x the straight line."
 
 

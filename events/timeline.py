@@ -33,6 +33,12 @@ MIN_STEP_S = 2.0
 V_MOVE = 0.10            # counts as moving
 V_STALL = 0.03           # below this the hand is stalled
 MIN_STALL_SEEN = 0.7     # share of a stall the hand must be measured in (else it is a dropout)
+# reattempt: the hand keeps returning to about the same spot (pick / put back / pick again), a
+# hidden correction cycle the worker rarely notices themself
+REATTEMPT_TOUCH_S = 0.25     # minimum time still-in-place to count as one "touch" of the part
+REATTEMPT_GAP_S = 2.5        # max time between touches to call them the same cluster
+REATTEMPT_DIST = 0.05        # frame-widths: touches this close together count as "the same spot"
+REATTEMPT_MIN_TOUCHES = 3    # >=3 touches = at least 2 unnecessary re-grasps
 FRICTION = {"search", "transit", "idle", "hesitation", "extra_reach", "reattempt"}
 SEVERITY = {"search": "red", "transit": "red", "idle": "yellow", "hesitation": "yellow",
             "extra_reach": "yellow", "reattempt": "yellow"}
@@ -243,6 +249,45 @@ def build(clip_id, keyframes=False):
                     i = j + 1
                 else:
                     i += 1
+
+        # reattempt: the hand keeps settling back on about the same spot (pick / put back /
+        # pick again / adjust / pick again) without the step ever finishing between touches
+        for h in pos:
+            p = pos[h][a:b + 1]
+            measured = ~np.isnan(p[:, 0])
+            stalled = (speed_s[a:b + 1] < V_STALL) & measured & ~bridged_only[a:b + 1]
+            touches = []
+            i = 0
+            while i < len(stalled):
+                if stalled[i]:
+                    j = i
+                    while j + 1 < len(stalled) and stalled[j + 1]:
+                        j += 1
+                    if t[a + j] - t[a + i] >= REATTEMPT_TOUCH_S:
+                        touches.append((i, j, np.nanmean(p[i:j + 1], axis=0)))
+                    i = j + 1
+                else:
+                    i += 1
+            k = 0
+            while k < len(touches):
+                cluster = [touches[k]]
+                m = k + 1
+                while m < len(touches):
+                    gap = t[a + touches[m][0]] - t[a + cluster[-1][1]]
+                    dist = float(np.linalg.norm(touches[m][2] - cluster[-1][2]))
+                    if gap <= REATTEMPT_GAP_S and dist <= REATTEMPT_DIST:
+                        cluster.append(touches[m])
+                        m += 1
+                    else:
+                        break
+                if len(cluster) >= REATTEMPT_MIN_TOUCHES:
+                    i0, j0 = cluster[0][0], cluster[-1][1]
+                    conf = min(0.85, 0.35 + 0.1 * len(cluster))
+                    add("reattempt", a + i0, a + j0, step_id=sid, hand=h, conf=conf,
+                        zone=zone_of(float(np.mean([c[2][0] for c in cluster]))),
+                        note=f"{len(cluster)} grasp/release-like cycles in place "
+                             f"({len(cluster) - 1} unnecessary correction{'s' if len(cluster) > 2 else ''})")
+                k = m if m > k else k + 1
 
     # tag events with the step they fall in
     for ev in events:
