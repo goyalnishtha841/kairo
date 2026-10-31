@@ -1,9 +1,10 @@
-# WorkFlow AI — AI Process Improvement Copilot
+# Kairo: AI Process Improvement Copilot
 
-> Instead of evaluating workers, WorkFlow AI evaluates the workstation.
+> Instead of evaluating workers, Kairo evaluates the workstation.
 
-Egocentric factory video → hand tracking → event timeline → friction map, auto-SOP,
-SOP comparison, layout recommendations, timeline-grounded copilot, shift report.
+Egocentric factory video → hand tracking + head motion → event timeline → friction map,
+auto-SOP, layout recommendations with minutes-per-shift savings, a timeline-grounded copilot,
+and a shift report.
 
 ## Data rules (read first)
 - **Never commit footage, frames, or screenshots.** `data/`, `outputs/` and all media are git-ignored.
@@ -11,25 +12,57 @@ SOP comparison, layout recommendations, timeline-grounded copilot, shift report.
 
 ## Layout
 ```
-perception/   A — hands.py (MediaPipe + identity + One-Euro + metrics), tools, head motion
-events/       B — timeline engine, friction detectors, layout optimizer
-ai/           C — SOP generator, comparator, copilot, shift report
-web/          D — React app (video + timeline + heatmap + chat)
-schema/       timeline contract + mock_timeline.json  ← everyone codes against this
-data/raw/     source clips (ignored)
-outputs/      per-clip results (ignored)
+perception/   hands.py (MediaPipe + L/R identity + One-Euro + metrics), ego_motion.py, web_proxy.py
+events/       timeline.py (states, friction, SOP steps), insights.py (savings + recommendations)
+ai/           copilot.py (rules engine; Claude with tools when credentials exist)
+server/       FastAPI: /api/clips, /api/clips/{id}/timeline|hands, /api/report, /api/ask, /media
+web/          React + Vite UI: Analyze · SOP · Layout & Savings · Shift Report
+schema/       timeline contract + mock_timeline.json
+pipeline.py   runs everything for one or more clips
 ```
 
 ## Setup
 ```bash
 pip install -r requirements.txt
+npm --prefix web install
+cp .env.example .env        # then put your GROQ_API_KEY in .env (git-ignored, never commit it)
 python -m gdown --folder "<drive folder url>" -O data/raw --continue
 ```
 
-## Run hand tracking
+## Process clips
 ```bash
-python perception/hands.py data/raw/<clip>.mp4 --stride 2 --max-seconds 60 --render
+python pipeline.py --all --skip-existing          # or: python pipeline.py MTL-SGF00106-021 ...
 ```
-Outputs `outputs/<clip>/hands.json`, `metrics.json`, `overlay.mp4`.
-Metrics reported: detection rate, per-hand presence, mean confidence, jitter raw vs smoothed (px),
-identity label overrides, processing FPS.
+Per clip this writes `outputs/<clip>/hands.json`, `metrics.json`, `timeline.json`, `frames/`, `web.mp4`
+(H.264 browser proxy), plus `outputs/shift_report.json` over all processed clips.
+CPU only: ~25 FPS at 640 px with `--stride 2` (about 2 min per 3-min clip).
+
+## Run the app
+```bash
+python -m uvicorn server.app:app --port 8000
+npm --prefix web run dev                          # http://localhost:5173
+```
+For a single-server demo: `npm --prefix web run build`, then just run uvicorn and open http://localhost:8000.
+
+### AI engines (picked automatically: Groq → Claude → rules)
+- **Groq** (`GROQ_API_KEY` in `.env`): copilot on `openai/gpt-oss-120b` with tool calls over the timeline;
+  SOP step names + tools from keyframes with `qwen/qwen3.8-27b` (vision).
+- **Claude** (`claude-opus-5-5`): same tools, used when Anthropic credentials exist and no Groq key is set.
+- **Rules**: deterministic, offline fallback; always cites timestamps.
+
+The LLM never sees video: it only queries the event timeline, and every moment it mentions is a
+`[clip@mm:ss]` citation the UI turns into a seek link.
+
+## How detection works
+| Signal | Source |
+|---|---|
+| Own hands only | ego-hand filter: palm length < 3.3% of frame width = someone else's hand, rejected |
+| Working | at least one of the wearer's hands in view (MediaPipe, 0.5 s median filter) |
+| Searching | hands out of view + head scanning (optical-flow pan/tilt), < 8 s |
+| Walking away | the same, longer than 8 s |
+| Idle / waiting | hands out of view, head still |
+| Hesitation | hand stalls 1–3 s between two movements |
+| Extra reach | one movement whose path is > 3x the straight line |
+| SOP steps | work blocks split by gaps ≥ 1.5 s, keyframe at the block middle |
+
+Savings = friction seconds × recoverable fraction (stated in the UI) × shift-length extrapolation.

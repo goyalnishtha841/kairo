@@ -18,6 +18,7 @@ import numpy as np
 from mediapipe.tasks.python import BaseOptions
 from mediapipe.tasks.python import vision
 
+from ego_motion import EgoMotion
 from one_euro import OneEuro
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,6 +28,7 @@ MODEL_URL = ("https://storage.googleapis.com/mediapipe-models/hand_landmarker/"
 
 HAND_IDS = ("L", "R")
 LOST_RESET_S = 0.5      # reset a hand's filter after it's been missing this long
+EGO_MIN_PALM = 0.033    # wrist->middle-MCP length / frame width; smaller hands belong to other people
 SWAP_GATE = 0.25        # max normalised wrist jump before we trust handedness over position
 CONNECTIONS = [(0, 1), (1, 2), (2, 3), (3, 4), (0, 5), (5, 6), (6, 7), (7, 8), (5, 9), (9, 10),
                (10, 11), (11, 12), (9, 13), (13, 14), (14, 15), (15, 16), (13, 17), (0, 17),
@@ -132,13 +134,14 @@ def run(video, stride=1, max_seconds=None, render=False, proc_width=640):
     landmarker = make_landmarker()
     ident = HandIdentity()
     filters = {h: OneEuro() for h in HAND_IDS}
+    ego = EgoMotion()
     writer = None
     if render:
         writer = cv2.VideoWriter(str(out_dir / "overlay.mp4"), cv2.VideoWriter_fourcc(*"mp4v"),
                                  fps / stride, (pw, ph))
 
     frames_out, raw_seq, smooth_seq = [], {h: [] for h in HAND_IDS}, {h: [] for h in HAND_IDS}
-    n_proc = n_any = 0
+    n_proc = n_any = other_hands = 0
     present = {h: 0 for h in HAND_IDS}
     scores = []
     t0 = time.perf_counter()
@@ -160,6 +163,11 @@ def run(video, stride=1, max_seconds=None, render=False, proc_width=640):
         for lms, hd in zip(res.hand_landmarks, res.handedness):
             label = "R" if hd[0].category_name == "Left" else "L"  # un-mirror
             lm = np.array([[p.x, p.y, p.z] for p in lms])
+            # ego-hand filter: the wearer's hands are close to the camera, so they look big
+            palm = np.linalg.norm((lm[0, :2] - lm[9, :2]) * [pw, ph]) / pw
+            if palm < EGO_MIN_PALM:
+                other_hands += 1
+                continue
             dets.append((label, hd[0].score, lm))
 
         assigned = ident.assign(dets, t)
@@ -183,7 +191,8 @@ def run(video, stride=1, max_seconds=None, render=False, proc_width=640):
         n_proc += 1
         n_any += bool(hands)
         frames_out.append({"frame": idx, "t": round(t, 3),
-                           "hands": [{"id": k, **v} for k, v in hands.items()]})
+                           "hands": [{"id": k, **v} for k, v in hands.items()],
+                           "cam": ego(small, stride / fps)})
         if writer:
             writer.write(draw(small.copy(), hands))
         idx += 1
@@ -224,8 +233,10 @@ def run(video, stride=1, max_seconds=None, render=False, proc_width=640):
         "jitter_px_raw": j_raw, "jitter_px_smoothed": j_sm,
         "jitter_reduction_pct": round(100 * (1 - j_sm / j_raw), 1) if j_raw and j_sm else None,
         "label_overrides": ident.label_overrides,
+        "other_person_hands_rejected": other_hands,
     }
     (out_dir / "hands.json").write_text(json.dumps({"clip_id": clip_id, "fps": fps,
+                                                    "duration_s": round(n_total / fps, 2),
                                                     "frames": frames_out}))
     (out_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
     print(json.dumps(metrics, indent=2))

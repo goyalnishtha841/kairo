@@ -1,0 +1,40 @@
+const j = (r) => {
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+  return r.json();
+};
+
+export const api = {
+  clips: () => fetch("/api/clips").then(j),
+  timeline: (id) => fetch(`/api/clips/${id}/timeline`).then(j),
+  hands: (id) => fetch(`/api/clips/${id}/hands`).then(j),
+  report: (clips) => fetch(`/api/report?clips=${clips.join(",")}`).then(j),
+  engine: () => fetch("/api/engine").then(j),
+  ask: (question, clips) =>
+    fetch("/api/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, clips }),
+    }).then(j),
+  video: (id) => `/media/${id}/web.mp4`,
+  frame: (id, name) => `/media/${id}/frames/${name.replace(/^frames\//, "")}`,
+};
+
+export const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
+export const LABEL = {
+  work: "Working",
+  search: "Searching",
+  transit: "Walking away",
+  idle: "Idle / waiting",
+  hesitation: "Hesitation",
+  extra_reach: "Extra reach",
+};
+
+export const COLOR = {
+  work: "var(--green)",
+  search: "var(--red)",
+  transit: "var(--red2)",
+  idle: "var(--amber)",
+  hesitation: "var(--amber)",
+  extra_reach: "var(--amber)",
+};

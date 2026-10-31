@@ -46,5 +46,8 @@ Friction types drive the red/yellow colouring in the UI.
 
 ## Hand tracks (A → B)
 `outputs/<clip_id>/hands.json`: per frame, per stable hand id:
-`{"frame": 12, "t": 0.4, "hands": [{"id": "R", "score": 0.93, "lm": [[x,y,z]*21], "lm_raw": [[x,y]*21]}]}`
+`{"frame": 12, "t": 0.4, "hands": [{"id": "R", "score": 0.93, "lm": [[x,y,z]*21], "lm_raw": [[x,y]*21]}], "cam": {...}}`
 Coordinates are normalised image coords (0..1). `lm` = smoothed, `lm_raw` = before filtering.
+
+`cam` = head motion: `pan`/`tilt` (frame-widths/s, ~head turning), `roll` (rad/s),
+`flow` (median flow, ~walking), `sharp` (Laplacian variance, low = motion blur), `ok`.

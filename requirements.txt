@@ -4,3 +4,7 @@ numpy
 fastapi
 uvicorn
 gdown
+imageio-ffmpeg
+groq
+# optional: Claude engine
+anthropic
