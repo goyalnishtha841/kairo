@@ -38,7 +38,7 @@ function Accuracy({ acc }) {
   );
 }
 
-export default function Report({ report, clips }) {
+export default function Report({ report, clips, seek }) {
   const r = report;
   const f = r.friction;
   const [acc, setAcc] = useState(null);
@@ -61,7 +61,7 @@ export default function Report({ report, clips }) {
         <div className="tile"><span>Hands-on work</span><b>{r.breakdown_pct.work ?? 0}%</b></div>
         <div className="tile"><span>Search time</span><b>{r.breakdown_pct.search ?? 0}%</b><small>{f.search.count} events</small></div>
         <div className="tile"><span>Idle / waiting</span><b>{r.breakdown_pct.idle ?? 0}%</b><small>{f.idle.count} events</small></div>
-        <div className="tile"><span>Hesitations</span><b>{f.hesitation.count}</b><small>{f.hesitation.seconds}s</small></div>
+        <div className="tile"><span>Recoverable value</span><b>€{(r.roi_eur_per_year_total || 0).toLocaleString()}</b><small>per station / year</small></div>
         <div className="tile red"><span>Est. lost time</span><b>{r.lost_min_per_shift}</b><small>min / shift</small></div>
       </div>
 
@@ -78,6 +78,26 @@ export default function Report({ report, clips }) {
           <p>Longest step: <b>{r.longest_step.label}</b> in {r.longest_step.clip_id} at {fmt(r.longest_step.t_start)}, {r.longest_step.duration_s.toFixed(1)}s (average {r.avg_step_s}s).</p>
         </>
       )}
+
+      <h3 className="sec">Collaboration events</h3>
+      {r.collaboration_events?.length ? (
+        <table className="tbl">
+          <thead><tr><th>Recording</th><th>When</th><th>Duration</th><th>Type</th><th>Confidence</th><th>Signals</th></tr></thead>
+          <tbody>
+            {r.collaboration_events.map((e) => (
+              <tr key={e.clip_id + e.t}>
+                <td>{e.clip_id}</td>
+                <td><a className="cite" onClick={() => seek(e.clip_id, e.t)}>▶ {fmt(e.t)}</a></td>
+                <td>{e.dur}s</td>
+                <td>{LABEL[e.type]}</td>
+                <td>{Math.round((e.confidence || 0) * 100)}%</td>
+                <td className="muted">{e.note}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : <p className="muted">No high-confidence collaboration events.</p>}
+      <p className="muted small">Reported only when several signals agree (another person close and facing the wearer, work paused, voice activity or proximity). Never a transcript; precision is preferred over recall.</p>
 
       <h3 className="sec">Friction detail</h3>
       <table className="tbl">

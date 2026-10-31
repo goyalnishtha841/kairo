@@ -18,6 +18,8 @@ export const api = {
   compare: (ref, target) => fetch(`/api/compare?ref=${encodeURIComponent(ref)}&target=${encodeURIComponent(target)}`).then(j),
   raw: () => fetch("/api/raw").then(j),
   accuracy: () => fetch("/api/accuracy").then(j),
+  proficiency: (clip) => fetch(`/api/proficiency?clip=${encodeURIComponent(clip)}`).then(j),
+  simulate: (clip, type) => fetch(`/api/simulate?clip=${encodeURIComponent(clip)}&friction_type=${type}`).then(j),
   process: (id) => fetch(`/api/process/${encodeURIComponent(id)}`, { method: "POST" }).then(j),
   upload: (file) => {
     const fd = new FormData();
@@ -37,6 +39,8 @@ export const LABEL = {
   idle: "Idle / waiting",
   hesitation: "Hesitation",
   extra_reach: "Extra reach",
+  collaboration: "Collaboration",
+  possible_collaboration: "Possible collaboration",
 };
 
 export const COLOR = {
@@ -46,4 +50,6 @@ export const COLOR = {
   idle: "var(--amber)",
   hesitation: "var(--amber)",
   extra_reach: "var(--amber)",
+  collaboration: "var(--blue)",
+  possible_collaboration: "var(--blue)",
 };

@@ -2,10 +2,10 @@ import React, { useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
 
 const SUGGEST = [
-  "Why is this workstation inefficient?",
-  "Where did the worker search for tools?",
-  "Which step took the longest?",
-  "What should we change?",
+  "Where was time lost?",
+  "Which recommendation has the highest ROI?",
+  "Did the workflow deviate from baseline?",
+  "When did collaboration occur?",
 ];
 const CITE = /\[([\w.-]+)@(\d{1,2}):(\d{2})\]/g;
 

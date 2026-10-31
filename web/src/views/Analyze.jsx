@@ -69,6 +69,11 @@ function FrictionTimeline({ timeline, now, onSeek }) {
           <div key={e.id} className="ftl-mark" style={{ left: pct(e.t_start) }} title={`${LABEL[e.type]}: ${e.note}`}
                onClick={() => onSeek(e.t_start)} />
         ))}
+        {timeline.events.filter((e) => e.severity === "blue").map((e) => (
+          <div key={e.id} className={"ftl-collab" + (e.type === "possible_collaboration" ? " possible" : "")}
+               style={{ left: pct(e.t_start), width: pct(e.t_end - e.t_start) }}
+               title={`${LABEL[e.type]} (confidence ${Math.round(e.confidence * 100)}%): ${e.note}`} onClick={() => onSeek(e.t_start)} />
+        ))}
       </div>
       <div className="ftl-steps">
         {timeline.steps.map((s) => (
@@ -81,6 +86,7 @@ function FrictionTimeline({ timeline, now, onSeek }) {
           <span key={k}><i style={{ background: COLOR[k] }} />{LABEL[k]}</span>
         ))}
         <span><i className="dot" />Hesitation / extra reach</span>
+        <span><i style={{ background: "var(--blue)" }} />Collaboration</span>
         <span className="muted">Numbered blocks = SOP steps</span>
       </div>
     </div>
@@ -131,10 +137,10 @@ export default function Analyze({ clip, timeline, videoRef, onVideoReady, seek, 
       <section className="right">
         <div className="panel events">
           <div className="panel-h">
-            <h3>Friction events <span className="muted">({friction.length})</span></h3>
+            <h3>Events <span className="muted">({friction.length})</span></h3>
             <select value={filter} onChange={(e) => setFilter(e.target.value)}>
               <option value="all">All</option>
-              {["search", "transit", "idle", "hesitation", "extra_reach"].map((k) => <option key={k} value={k}>{LABEL[k]}</option>)}
+              {["search", "transit", "idle", "hesitation", "extra_reach", "collaboration", "possible_collaboration"].map((k) => <option key={k} value={k}>{LABEL[k]}</option>)}
             </select>
           </div>
           <div className="evlist">

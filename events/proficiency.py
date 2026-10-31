@@ -107,7 +107,8 @@ def _compute_metrics(clip_id):
     ev = {}
     for e in tl["events"]:
         ev.setdefault(e["type"], []).append(e)
-    collab = sum(e["t_end"] - e["t_start"] for e in tl["events"] if e["type"] == "collaboration")
+    collab = sum(e["t_end"] - e["t_start"] for e in tl["events"]
+                 if e["type"] in ("collaboration", "possible_collaboration"))
     return {
         "hands_on_pct": round(100 * t_state.get("work", 0) / tl["duration_s"], 1),
         "search_s_per_min": round(sum(e["t_end"] - e["t_start"] for e in ev.get("search", [])) / mins, 2),

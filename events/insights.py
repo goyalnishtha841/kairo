@@ -37,6 +37,7 @@ def analyse(clip_ids, shift_hours=8.0):
     evidence = defaultdict(list)
     search_dirs = Counter()
     steps = []
+    collab = []
 
     for tl in tls:
         for s in tl["states"]:
@@ -49,6 +50,9 @@ def analyse(clip_ids, shift_hours=8.0):
                                         "id": e["id"], "note": e["note"]})
             if e["type"] == "search" and e.get("zone"):
                 search_dirs[e["zone"]] += 1
+            if e["type"] in ("collaboration", "possible_collaboration"):
+                collab.append({"clip_id": tl["clip_id"], "t": e["t_start"], "dur": round(d, 1), "type": e["type"],
+                               "confidence": e.get("confidence"), "note": e["note"]})
         for s in tl["steps"]:
             steps.append({**s, "clip_id": tl["clip_id"]})
 
@@ -87,6 +91,7 @@ def analyse(clip_ids, shift_hours=8.0):
                        for z in ("left", "center", "right")},
         "headline": headline,
         "roi_eur_per_year_total": sum(r["roi_eur_per_year"] for r in recs),
+        "collaboration_events": collab,
         "assumptions": {"recoverable_fraction": RECOVERABLE,
                         "labor_eur_per_hour": C.LABOR_EUR_PER_HOUR, "shifts_per_day": C.SHIFTS_PER_DAY,
                         "workdays_per_year": C.WORKDAYS_PER_YEAR,
