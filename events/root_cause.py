@@ -17,17 +17,20 @@ OUT = ROOT / "outputs"
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from insights import fmt_t, load  # noqa: E402
 
-# pattern -> (friction types whose clustering within one step triggers it, root cause, recommended fix)
+# pattern -> ({friction type: weight} whose weighted count within one step triggers it, root cause, fix).
+# Weights matter because a single "reattempt" event already encodes >=3 touches on the same spot
+# (events/timeline.py clusters them) -- it is as strong a signal on its own as 3 separate extra_reach
+# events, so it must not need two MORE events alongside it to cross min_events.
 PATTERNS = [
-    {"name": "loose_fixture", "types": ("reattempt", "extra_reach"), "min_events": 3,
+    {"name": "loose_fixture", "weights": {"reattempt": 3, "extra_reach": 1}, "min_events": 3,
      "root_cause": "Repeated tool/part repositioning around the same spot is consistent with a loose or "
                     "missing fixture, not a one-off mistake.",
      "fix": "Inspect and recalibrate (or add) the fixture/jig that should be holding the part still."},
-    {"name": "missing_tool_station", "types": ("search",), "min_events": 4,
+    {"name": "missing_tool_station", "weights": {"search": 1}, "min_events": 4,
      "root_cause": "Frequent, repeated searching for the same kind of tool suggests the tool isn't kept at "
                     "the station, or there aren't enough of them.",
      "fix": "Add a dedicated holder for that tool within arm's reach, or stock a second one."},
-    {"name": "unclear_reference", "types": ("hesitation",), "min_events": 4,
+    {"name": "unclear_reference", "weights": {"hesitation": 1}, "min_events": 4,
      "root_cause": "Frequent hesitation before placing/aligning suggests there is no clear visual reference "
                     "for the correct position.",
      "fix": "Add a jig, stop or marked position so the correct placement is unambiguous."},
@@ -48,9 +51,9 @@ def analyse(clip_ids):
             for e in evs:
                 counts[e["type"]] = counts.get(e["type"], 0) + 1
             for pat in PATTERNS:
-                n = sum(counts.get(t, 0) for t in pat["types"])
+                n = sum(counts.get(t, 0) * w for t, w in pat["weights"].items())
                 if n >= pat["min_events"]:
-                    ev_cites = [f"[{c}@{fmt_t(e['t_start'])}]" for e in evs if e["type"] in pat["types"]][:3]
+                    ev_cites = [f"[{c}@{fmt_t(e['t_start'])}]" for e in evs if e["type"] in pat["weights"]][:3]
                     label = next((s["label"] for s in tl["steps"] if s["step_id"] == step_id), f"step {step_id}")
                     findings.append({"clip_id": c, "step_id": step_id, "step_label": label,
                                       "pattern": pat["name"], "event_count": n, "root_cause": pat["root_cause"],
