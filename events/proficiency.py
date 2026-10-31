@@ -155,7 +155,9 @@ def level(score):
     return "Needs training"
 
 
-EVIDENCE_TYPE = {"search_s_per_min": "search", "idle_s_per_min": "idle", "hesitations_per_min": "hesitation"}
+# which timeline events explain a below-baseline metric (cited as evidence)
+EVIDENCE_TYPE = {"search_s_per_min": ("search",), "idle_s_per_min": ("idle",), "hesitations_per_min": ("hesitation",),
+                 "hands_on_pct": ("idle", "search", "transit"), "interruptions_per_min": ("idle", "search", "transit")}
 
 
 def score(clip_id, cache=None):
@@ -180,7 +182,7 @@ def score(clip_id, cache=None):
                 + (", better than baseline" if better else ", below baseline" if worse else ", in line with baseline"))
         evidence = []
         if worse and name in EVIDENCE_TYPE:
-            evs = sorted((e for e in tl["events"] if e["type"] == EVIDENCE_TYPE[name]),
+            evs = sorted((e for e in tl["events"] if e["type"] in EVIDENCE_TYPE[name]),
                          key=lambda e: e["t_start"] - e["t_end"])[:3]
             evidence = [f"[{clip_id}@{fmt_t(e['t_start'])}]" for e in evs]
         rows.append({"metric": name, "label": label, "unit": unit, "value": v, "baseline": b["median"],

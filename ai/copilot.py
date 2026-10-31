@@ -17,12 +17,17 @@ sys.path.insert(0, str(ROOT / "events"))
 sys.path.insert(0, str(ROOT / "ai"))
 import env  # noqa: E402,F401  (loads .env)
 from insights import analyse, fmt_t, load  # noqa: E402
+import proficiency  # noqa: E402
 
 MODEL = "claude-opus-5-5"
 GROQ_MODEL = "openai/gpt-oss-120b"
 CITE_RE = re.compile(r"\[([\w.-]+)@(\d{1,2}):(\d{2})\]")
 LABELS = {"search": "searching", "transit": "walking away / fetching", "idle": "idle",
-          "hesitation": "hesitation", "extra_reach": "extra reach"}
+          "hesitation": "hesitation", "extra_reach": "extra reach",
+          "collaboration": "collaboration", "possible_collaboration": "possible collaboration"}
+
+
+COLLAB = ("collaboration", "possible_collaboration")
 
 
 def cite(clip_id, t):
@@ -55,7 +60,7 @@ class Context:
             if clip_id and c != clip_id:
                 continue
             for e in tl["events"]:
-                if type and e["type"] != type:
+                if type and e["type"] != type and not (type == "collaboration" and e["type"] in COLLAB):
                     continue
                 out.append({"cite": cite(c, e["t_start"]), "clip_id": c, "t_start": e["t_start"],
                             "duration_s": round(e["t_end"] - e["t_start"], 1), "type": e["type"],
@@ -68,19 +73,72 @@ class Context:
                  **{k: s.get(k) for k in ("step_id", "label", "tool", "t_start", "duration_s", "hand", "zone")}}
                 for c, tl in self.tls.items() if not clip_id or c == clip_id for s in tl["steps"]]
 
+    def recommendations(self):
+        return [{**{k: x[k] for k in ("title", "observation", "action", "confidence", "saving_min_per_shift",
+                                      "roi_eur_per_year", "support")},
+                 "evidence": [cite(e["clip_id"], e["t"]) for e in x["evidence"][:3]]}
+                for x in self.report["recommendations"]]
+
     def summary(self):
         r = self.report
         return {k: r[k] for k in ("observed_min", "breakdown_pct", "friction", "lost_min_per_shift",
-                                  "recoverable_min_per_shift", "headline")} | {
-            "recommendations": [{**{k: x[k] for k in ("title", "detail", "saving_min_per_shift", "support")},
-                                 "evidence": [cite(e["clip_id"], e["t"]) for e in x["evidence"][:3]]}
-                                for x in r["recommendations"]]}
+                                  "recoverable_min_per_shift", "roi_eur_per_year_total", "headline")} | {
+            "recommendations": self.recommendations()}
+
+    def proficiency(self, clip_id=None, limit=3):
+        """Workflow-vs-baseline scores; with no clip, the recordings that deviate most."""
+        cache = {}
+        clips = [clip_id] if clip_id else self.clip_ids
+        rows = []
+        for c in clips:
+            p = proficiency.score(c, cache)
+            worst = [m for m in p["metrics"] if m["direction"] == "worse"]
+            rows.append({"clip_id": c, "station": p["station"], "score": p["score"], "level": p["level"],
+                         "baseline_recordings": p["baseline_recordings"],
+                         "baseline_reliability": p["baseline_reliability"],
+                         "deviations": [{"explanation": m["explanation"], "evidence": m["evidence"]} for m in worst]})
+        rows.sort(key=lambda x: x["score"] if x["score"] is not None else 100)
+        return rows[:limit] if not clip_id else rows
 
 
 # --------------------------------------------------------------------------- rules engine
 def answer_rules(q, ctx):
     ql = q.lower()
     r = ctx.report
+
+    if any(w in ql for w in ("collaborat", "together", "interact", "help from", "assist")):
+        evs = ctx.events(type="collaboration", limit=100)
+        if not evs:
+            return ("No high-confidence collaboration events were detected in the selected clips. "
+                    "Kairo only reports collaboration when several signals agree, so short or unclear "
+                    "encounters are left out.")
+        evs.sort(key=lambda e: (e["clip_id"], e["t_start"]))
+        lines = [f"- {LABELS[e['type']]} {e['duration_s']:.0f}s {cite(e['clip_id'], e['t_start'])}: {e['note']}"
+                 for e in evs[:6]]
+        return (f"{len(evs)} collaboration event(s), detected from agreeing signals (not from what was said):\n"
+                + "\n".join(lines))
+    if any(w in ql for w in ("roi", "money", "eur", "euro", "cost", "highest", "biggest", "most value")):
+        recs = r["recommendations"]
+        if not recs:
+            return "No significant friction found, so there is nothing to recommend yet."
+        x = recs[0]
+        ev = x["evidence"][0] if x["evidence"] else None
+        return (f"Highest ROI: **{x['title']}**, about EUR {x['roi_eur_per_year']:,} per station per year "
+                f"(~{x['saving_min_per_shift']} min per shift, confidence {round(100 * x['confidence'])}%). "
+                f"{x['observation']} Evidence: {x['support']}"
+                + (f", e.g. {cite(ev['clip_id'], ev['t'])}." if ev else ".")
+                + f" Assumes EUR {r['assumptions']['labor_eur_per_hour']:g}/h; shift figures are extrapolated.")
+    if any(w in ql for w in ("baseline", "deviat", "proficien", "skill", "fingerprint", "normal", "expert",
+                             "novice")):
+        rows = ctx.proficiency()
+        out = ["Workflow scores against each station's baseline (50 = the station's typical workflow; "
+               "this describes the recording, not a person):"]
+        for p in rows:
+            dev = p["deviations"][0] if p["deviations"] else None
+            out.append(f"- {p['clip_id']}: {p['score']} ({p['level']})"
+                       + (f". {dev['explanation']} {' '.join(dev['evidence'][:2])}" if dev
+                          else ", in line with baseline."))
+        return "\n".join(out)
 
     def ev_lines(typ, n=5, order="time"):
         evs = ctx.events(type=typ, limit=500)
@@ -137,9 +195,9 @@ def answer_rules(q, ctx):
                 f"{r['lost_min_per_shift']} min per {r['shift_hours']:g}h shift (extrapolated)."
                 + (f"\nBiggest lever: {top['title']} (~{top['saving_min_per_shift']} min/shift), e.g. "
                    f"{cite(top['evidence'][0]['clip_id'], top['evidence'][0]['t'])}." if top and top["evidence"] else ""))
-    return ("I answer from the event timeline. Try: \"Where did the worker search for tools?\", "
-            "\"Which step took the longest?\", \"Why is this station inefficient?\", "
-            "\"What should we change?\", \"When was the first idle period?\"")
+    return ("I answer from the event timeline. Try: \"Where was time lost?\", "
+            "\"Which recommendation has the highest ROI?\", \"Did the workflow deviate from baseline?\", "
+            "\"When did collaboration occur?\", \"Which step took the longest?\"")
 
 
 # --------------------------------------------------------------------------- claude engine
@@ -147,15 +205,23 @@ TOOLS = [
     {"name": "get_summary", "description": "Time breakdown, friction totals, lost minutes per shift and ranked "
      "recommendations for the selected clips.", "input_schema": {"type": "object", "properties": {}}},
     {"name": "list_events", "description": "Timeline events. type is one of search, transit, idle, hesitation, "
-     "extra_reach (omit for all). Times are seconds from clip start.",
+     "extra_reach, collaboration, possible_collaboration (omit for all). Times are seconds from clip start.",
      "input_schema": {"type": "object", "properties": {
-         "type": {"type": "string"}, "clip_id": {"type": "string"}, "limit": {"type": "integer"}}}},
+         "type": {"type": ["string", "null"]}, "clip_id": {"type": ["string", "null"]},
+         "limit": {"type": ["integer", "null"]}}}},
     {"name": "list_steps", "description": "Detected work steps (SOP candidates) with start/end and duration.",
-     "input_schema": {"type": "object", "properties": {"clip_id": {"type": "string"}}}},
+     "input_schema": {"type": "object", "properties": {"clip_id": {"type": ["string", "null"]}}}},
+    {"name": "get_recommendations", "description": "Ranked recommendations with observation, confidence, minutes "
+     "per shift, EUR per year (ROI) and evidence cites.", "input_schema": {"type": "object", "properties": {}}},
+    {"name": "get_proficiency", "description": "Workflow score (0-100, 50 = station baseline) with explained "
+     "deviations and evidence cites. Omit clip_id for the recordings that deviate most. Describes workflows, "
+     "never people.", "input_schema": {"type": "object", "properties": {"clip_id": {"type": ["string", "null"]}}}},
 ]
 
 SYSTEM = """You are Kairo, a process-improvement copilot for factory egocentric video.
-You evaluate the workstation and process, never the worker as a person.
+You evaluate the workstation and process, never the worker as a person: say "the workflow deviates from
+the baseline", never "the worker is slow". Collaboration events come from agreeing signals; never claim
+what people said.
 Answer only from tool results. If the data does not contain the answer, say so.
 Every event, step and recommendation in the tool results has a "cite" string like
 [MTL-SGF00106-021@00:46]. When you mention a moment, paste its cite string exactly as given (plain
@@ -168,9 +234,13 @@ def _run_tool(ctx, name, args):
     if name == "get_summary":
         return ctx.summary()
     if name == "list_events":
-        return ctx.events(args.get("type"), args.get("clip_id"), args.get("limit", 20))
+        return ctx.events(args.get("type"), args.get("clip_id"), args.get("limit") or 20)
     if name == "list_steps":
         return ctx.steps(args.get("clip_id"))
+    if name == "get_recommendations":
+        return ctx.recommendations()
+    if name == "get_proficiency":
+        return ctx.proficiency(args.get("clip_id"))
     return {"error": f"unknown tool {name}"}
 
 

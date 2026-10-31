@@ -92,3 +92,24 @@ def test_compare_detects_missing_swapped_and_slower(synthetic_pair):
     assert "out_of_order" in status.values()
     assert r["adherence_pct"] < 100
     assert any("Missing step" in f for f in r["findings"])
+
+
+@pytest.mark.parametrize("q", ["Which recommendation has the highest ROI?", "Did the workflow deviate from baseline?"])
+def test_rules_copilot_new_modules_cite_evidence(q):
+    ans = copilot.ask(q, CLIPS, engine="rules")
+    assert ans["citations"], q
+    assert_citations_valid(ans)
+    assert "worker is" not in ans["answer"].lower()  # workflow wording, never judging a person
+
+
+def test_rules_copilot_collaboration_never_claims_content():
+    ans = copilot.ask("When did collaboration occur?", CLIPS, engine="rules")
+    assert_citations_valid(ans)
+    low = ans["answer"].lower()
+    assert "discussed" not in low and "they said" not in low
+
+
+def test_collaboration_query_includes_possible_events():
+    ctx = copilot.Context(CLIPS)
+    both = ctx.events(type="collaboration", limit=500)
+    assert all(e["type"] in copilot.COLLAB for e in both)
