@@ -4,16 +4,23 @@ import { CountUp } from "../ui.jsx";
 
 // Top-down sketch of the work area: worker at the bottom, three zones in an arc.
 // Red = where the head turned while searching; green = where hands actually worked.
-function StationMap({ dirs = {}, work = {}, suggested }) {
+// When a layout fix is recommended, draws an arrow from the most-searched zone to the
+// most-worked zone -- "move the tool here" -- derived from the same measured zone data,
+// never a guessed tool position (there is no tool detector to place one precisely).
+const ZONE_POS = { left: { x: 70, y: 150 }, center: { x: 200, y: 70 }, right: { x: 330, y: 150 } };
+
+function StationMap({ dirs = {}, work = {}, layoutRec }) {
   const maxS = Math.max(1, ...Object.values(dirs));
   const maxW = Math.max(1, ...Object.values(work));
-  const zones = [
-    { k: "left", x: 70, y: 150 },
-    { k: "center", x: 200, y: 70 },
-    { k: "right", x: 330, y: 150 },
-  ];
+  const zones = Object.keys(ZONE_POS).map((k) => ({ k, ...ZONE_POS[k] }));
+  const topSearch = Object.entries(dirs).sort((a, b) => b[1] - a[1])[0]?.[0];
+  const topWork = Object.entries(work).sort((a, b) => b[1] - a[1])[0]?.[0];
+  const showArrow = layoutRec && topSearch && topWork && topSearch !== topWork;
+  const from = showArrow ? ZONE_POS[topSearch] : null;
+  const to = showArrow ? ZONE_POS[topWork] : null;
+  const mid = showArrow ? { x: (from.x + to.x) / 2, y: Math.min(from.y, to.y) - 40 } : null;
   return (
-    <svg viewBox="0 0 400 300" className="map" role="img" aria-label="Station map of search directions and work zones">
+    <svg viewBox="0 0 400 320" className="map" role="img" aria-label="Station map of search directions and work zones">
       <path d="M40 270 A170 170 0 0 1 360 270" fill="none" stroke="var(--line)" strokeDasharray="4 6" />
       <text x="200" y="292" textAnchor="middle" className="svgmuted">worker</text>
       <circle cx="200" cy="262" r="14" fill="var(--panel2)" stroke="var(--fg2)" />
@@ -30,11 +37,24 @@ function StationMap({ dirs = {}, work = {}, suggested }) {
           </g>
         );
       })}
-      {suggested && (
+      {showArrow && (
         <g>
-          <rect x="160" y="168" width="80" height="34" rx="6" fill="none" stroke="var(--accent)" strokeWidth="2" strokeDasharray="5 4" />
-          <text x="200" y="190" textAnchor="middle" className="svgaccent">tool cart</text>
+          <defs>
+            <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8 Z" fill="var(--accent)" />
+            </marker>
+          </defs>
+          <path d={`M${from.x},${from.y} Q${mid.x},${mid.y} ${to.x},${to.y}`} fill="none" stroke="var(--accent)"
+                strokeWidth="2" strokeDasharray="5 4" markerEnd="url(#arrowhead)" />
+          <rect x={to.x - 46} y={to.y - 46} width="92" height="26" rx="6" fill="none" stroke="var(--accent)"
+                strokeWidth="2" strokeDasharray="3 3" />
+          <text x={to.x} y={to.y - 29} textAnchor="middle" className="svgaccent">suggested spot</text>
         </g>
+      )}
+      {showArrow && (
+        <text x="200" y="312" textAnchor="middle" className="svgmuted">
+          {layoutRec.title}: moving the {topSearch}-zone tool to {topWork} saves ~{layoutRec.saving_min_per_shift} min/shift
+        </text>
       )}
     </svg>
   );
@@ -111,10 +131,46 @@ function Rec({ r, rank, seek }) {
   );
 }
 
+function Safety({ clips, seek }) {
+  const [rows, setRows] = useState(null);
+  useEffect(() => {
+    Promise.all(clips.map((c) => api.safety(c))).then(setRows).catch(() => setRows([]));
+  }, [clips.join(",")]);
+  if (!rows) return null;
+  const configured = rows.filter((r) => r.configured);
+  const forecasts = configured.flatMap((r) => r.forecasts.map((f) => ({ ...f, clip_id: r.clip_id })));
+  return (
+    <div className="panel glass">
+      <div className="panel-h"><h3>Safety risk</h3><span className="muted">predicted, not just detected</span></div>
+      {!configured.length ? (
+        <p className="muted small">No unsafe zone is configured for any station in this shift, so safety risk
+          cannot be measured yet -- that is not the same as "safe". Configure events/config.py's UNSAFE_ZONES
+          for a station to turn this on.</p>
+      ) : forecasts.length ? (
+        <>
+          <ul className="replist">
+            {forecasts.slice(0, 5).map((f, i) => (
+              <li key={i}>
+                <b>{Math.round(f.probability_next_window * 100)}% chance</b> of another unsafe reach in the next
+                {" "}{f.window_s}s <span className="muted">({f.recent_count} in the last {f.window_s}s)</span>{" "}
+                <a className="cite" onClick={() => seek(f.clip_id, f.t)}>▶ {fmt(f.t)}</a>
+              </li>
+            ))}
+          </ul>
+          <p className="muted small">Poisson-rate extrapolation from recent unsafe-reach frequency -- a heuristic, not a trained model.</p>
+        </>
+      ) : (
+        <p className="muted small">Unsafe zones configured ({configured.map((r) => r.unsafe_zones.join("/")).join(", ")}), no repeated unsafe reaches detected.</p>
+      )}
+    </div>
+  );
+}
+
 export default function Impact({ report, seek }) {
   const recs = report.recommendations;
   const b = report.breakdown_pct;
   const a = report.assumptions;
+  const layoutRec = recs.find((r) => r.kind === "layout");
   return (
     <div className="impact">
       <div className="hero glass">
@@ -149,8 +205,12 @@ export default function Impact({ report, seek }) {
         </div>
         <div className="panel glass">
           <div className="panel-h"><h3>Station map</h3><span className="muted">search direction vs work</span></div>
-          <StationMap dirs={report.search_directions} work={report.work_zones} suggested={recs.some((r) => r.kind === "layout")} />
+          <StationMap dirs={report.search_directions} work={report.work_zones} layoutRec={layoutRec} />
         </div>
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        <Safety clips={report.clips} seek={seek} />
       </div>
       <p className="muted small">
         ROI = minutes per shift × €{a.labor_eur_per_hour}/h × {a.shifts_per_day} shifts × {a.workdays_per_year} days.

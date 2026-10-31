@@ -26,6 +26,7 @@ export const api = {
   process: (id) => fetch(`/api/process/${encodeURIComponent(id)}`, { method: "POST" }).then(j),
   shiftSummary: (clips) => fetch(`/api/shift-summary?clips=${clips.join(",")}`).then(j),
   rootCause: (clips) => fetch(`/api/root-cause?clips=${clips.join(",")}`).then(j),
+  safety: (clip) => fetch(`/api/safety?clip=${encodeURIComponent(clip)}`).then(j),
   sopCompliance: (clipId, expectedSteps, mandatory) =>
     fetch("/api/sop-compliance", {
       method: "POST",

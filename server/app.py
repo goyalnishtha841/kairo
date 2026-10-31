@@ -15,7 +15,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -37,6 +37,7 @@ import knowledge_graph  # noqa: E402
 import memory  # noqa: E402
 import proficiency  # noqa: E402
 import quality  # noqa: E402
+import pdf_report  # noqa: E402
 import recommend  # noqa: E402
 import root_cause  # noqa: E402
 import safety  # noqa: E402
@@ -261,6 +262,14 @@ def get_memory(label: str, clips: str = "", before_clip: str | None = None,
 @app.get("/api/shift-summary")
 def get_shift_summary(clips: str = "", shift_hours: float = 8.0):
     return shift_summary.summarize(parse_clips(clips), shift_hours)
+
+
+@app.get("/api/shift-report.pdf")
+def get_shift_report_pdf(clips: str = "", shift_hours: float = 8.0):
+    ids = parse_clips(clips)
+    pdf = pdf_report.build(ids, shift_hours)
+    return Response(content=pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": "attachment; filename=kairo-shift-report.pdf"})
 
 
 # --------------------------------------------------------------------------- processing jobs

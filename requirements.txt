@@ -11,3 +11,6 @@ anthropic
 python-multipart
 pytest
 webrtcvad-wheels
+reportlab
+# optional: tool detector (open-vocabulary, unvalidated -- see events/tools.py)
+ultralytics

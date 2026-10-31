@@ -174,11 +174,28 @@ def test_root_cause_matches_the_loose_fixture_pattern(clips):
     assert len(findings[0]["evidence"]) >= 1
 
 
-def test_knowledge_graph_answers_task_delay_but_not_tool(clips):
+def test_knowledge_graph_answers_task_delay_but_not_tool_when_unconfigured(clips):
     task_q = knowledge_graph.query("which task causes the highest delay?", clips)
     tool_q = knowledge_graph.query("which tool causes the highest delay?", clips)
     assert task_q["rows"]
-    assert tool_q["rows"] == [] and "no tool detector" in tool_q["answer"]
+    assert tool_q["rows"] == [] and "tool detection configured" in tool_q["answer"]
+
+
+def test_knowledge_graph_answers_tool_delay_once_tools_are_detected(clips):
+    # simulate a step having gone through perception/tools.py + events/apply_tools.py
+    tl_path = OUT / clips[1] / "timeline.json"
+    tl = json.loads(tl_path.read_text())
+    tl["steps"][2]["tool_detected"] = "screwdriver"
+    tl["steps"][2]["tool_detected_confidence"] = 0.42
+    tl_path.write_text(json.dumps(tl))
+    try:
+        tool_q = knowledge_graph.query("which tool causes the highest delay?", clips)
+        assert tool_q["rows"] and tool_q["rows"][0]["key"] == "screwdriver"
+        assert "unvalidated" in tool_q["answer"]
+    finally:
+        del tl["steps"][2]["tool_detected"]
+        del tl["steps"][2]["tool_detected_confidence"]
+        tl_path.write_text(json.dumps(tl))
 
 
 def test_memory_recognises_an_earlier_completed_step(clips):

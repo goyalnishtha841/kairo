@@ -105,6 +105,12 @@ export default function Sop({ clip, timeline, seek }) {
                   {s.zone && <span>Zone: {s.zone}</span>}
                   <span>Active {Math.round(s.active_ratio * 100)}%</span>
                 </div>
+                {s.tool_detected && (
+                  <div className="muted small" title={s.tool_detection_note}>
+                    Detected: {s.tool_detected} ({Math.round((s.tool_detected_confidence || 0) * 100)}% conf.,
+                    unvalidated)
+                  </div>
+                )}
                 {fr.length > 0 && <div className="warn">⚠ {fr.length} friction event{fr.length > 1 ? "s" : ""} in this step</div>}
               </div>
             </div>

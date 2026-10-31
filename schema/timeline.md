@@ -51,3 +51,10 @@ Coordinates are normalised image coords (0..1). `lm` = smoothed, `lm_raw` = befo
 
 `cam` = head motion: `pan`/`tilt` (frame-widths/s, ~head turning), `roll` (rad/s),
 `flow` (median flow, ~walking), `sharp` (Laplacian variance, low = motion blur), `ok`.
+
+## Tool detection (unvalidated, additive)
+`events/apply_tools.py` adds three optional fields to each `steps[]` entry when a station has
+`events/config.py STATION_TOOLS` configured: `tool_detected` (string or null), `tool_detected_confidence`
+(0-1), `tool_detection_note` (a fixed honesty string, or null). This is a separate field from the
+existing `tool` (the VLM caption's guess) -- one unvalidated guess never silently overwrites the
+other. See `perception/tools.py` for why neither is measured against held-out accuracy yet.

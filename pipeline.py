@@ -20,6 +20,7 @@ import hands  # noqa: E402
 import sop_labels  # noqa: E402
 import insights  # noqa: E402
 import collaboration  # noqa: E402
+import config as C  # noqa: E402
 import social  # noqa: E402
 import timeline  # noqa: E402
 import verify  # noqa: E402
@@ -28,6 +29,10 @@ import web_proxy  # noqa: E402
 RAW = ROOT / "data" / "raw"
 OUT = ROOT / "outputs"
 ENGINE = copilot.available_engine()
+
+
+def station_of(clip_id):
+    return clip_id.rsplit("-", 1)[0]
 
 
 def process(clip_id, stride=2, skip_existing=False):
@@ -44,6 +49,16 @@ def process(clip_id, stride=2, skip_existing=False):
         print(f"[{clip_id}] people, faces and voice activity ...")
         social.run(video)
     collaboration.apply(clip_id)
+    tool_classes = C.STATION_TOOLS.get(station_of(clip_id))
+    if tool_classes and not (out / "tools.json").exists():
+        print(f"[{clip_id}] tool detection ({len(tool_classes)} classes, unvalidated) ...")
+        try:
+            import tools as tool_detect  # lazy: pulls in ultralytics + CLIP only when actually configured
+            import apply_tools
+            tool_detect.run(video, tool_classes)
+            apply_tools.apply(clip_id)
+        except Exception as e:  # optional dependency / model download failure never blocks the pipeline
+            print(f"[{clip_id}] tool detection skipped: {type(e).__name__}: {e}")
     if ENGINE != "rules":
         print(f"[{clip_id}] captioning SOP steps ({ENGINE}) ...")
         try:

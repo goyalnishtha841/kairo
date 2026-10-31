@@ -128,7 +128,9 @@ export default function Report({ report, clips, seek }) {
           <h2>Shift Summary</h2>
           <p className="muted">{date} · {r.clips.length} clips · {r.observed_min} min observed · extrapolated to {r.shift_hours}h shift</p>
         </div>
-        <button className="ghost" onClick={() => window.print()}>Export PDF</button>
+        <a className="ghost" style={{ textDecoration: "none" }}
+           href={`/api/shift-report.pdf?clips=${r.clips.join(",")}&shift_hours=${r.shift_hours}`}
+           download="kairo-shift-report.pdf">Download PDF</a>
       </div>
 
       {summary && (

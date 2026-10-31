@@ -32,3 +32,10 @@ COLLAB_POSSIBLE = 0.60
 # station. Empty by default: with no zone configured, no safety event is ever produced for that
 # station -- a fabricated danger zone is worse than silence.
 UNSAFE_ZONES = {}
+
+# --- tool detection (open-vocabulary, unvalidated -- see perception/tools.py) -------------------
+# station -> the station's own tool vocabulary (text prompts for YOLO-World, e.g.
+# ["screwdriver", "hammer", "drill", "bolt", "wrench"]). Empty by default: a detector run on tool
+# names nobody configured would be a fabricated feature, not a measured one.
+STATION_TOOLS = {}
+TOOL_HAND_MAX_DIST = 0.18   # frame-widths: a detection this far from a hand isn't "in the hand"
