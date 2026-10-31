@@ -79,13 +79,45 @@ function Verification({ v }) {
   );
 }
 
+function citeToSeconds(cite) {
+  const m = /@(\d{2}):(\d{2})/.exec(cite || "");
+  return m ? { label: `${m[1]}:${m[2]}`, t: +m[1] * 60 + +m[2] } : null;
+}
+
+function RootCause({ findings, seek }) {
+  if (!findings) return null;
+  return (
+    <>
+      <h3 className="sec">Root cause analysis</h3>
+      {findings.length ? (
+        <ol className="replist">
+          {findings.slice(0, 5).map((f, i) => (
+            <li key={i}>
+              <b>{f.step_label}</b> ({f.clip_id}): {f.root_cause} <span className="muted">Fix: {f.fix}</span>{" "}
+              {f.evidence.map((c, j) => {
+                const p = citeToSeconds(c);
+                return p ? <a key={j} className="cite" onClick={() => seek(f.clip_id, p.t)}>▶ {p.label}</a> : null;
+              })}
+            </li>
+          ))}
+        </ol>
+      ) : <p className="muted">No clustered friction pattern (e.g. repeated re-grasps, repeated searches) matches a known root cause yet.</p>}
+      <p className="muted small">Deterministic pattern matching over clustered friction events, not an LLM guess -- every finding is evidence-cited.</p>
+    </>
+  );
+}
+
 export default function Report({ report, clips, seek }) {
   const r = report;
   const f = r.friction;
   const [acc, setAcc] = useState(null);
   const [ver, setVer] = useState(null);
+  const [summary, setSummary] = useState(null);
+  const [causes, setCauses] = useState(null);
   useEffect(() => { api.accuracy().then(setAcc).catch(() => {}); }, []);
   useEffect(() => { api.verification().then(setVer).catch(() => {}); }, []);
+  useEffect(() => { api.shiftSummary(r.clips).then(setSummary).catch(() => {}); }, [r.clips]);
+  useEffect(() => { api.rootCause(r.clips).then(setCauses).catch(() => {}); }, [r.clips]);
   const metrics = clips.map((c) => c.metrics).filter((m) => m && m.clip_id);
   const avg = (k) => metrics.length ? metrics.reduce((a, m) => a + (m[k] || 0), 0) / metrics.length : null;
   const date = new Date().toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
@@ -98,6 +130,18 @@ export default function Report({ report, clips, seek }) {
         </div>
         <button className="ghost" onClick={() => window.print()}>Export PDF</button>
       </div>
+
+      {summary && (
+        <div className="ai-narrative">
+          <span className="ai-tag">AI SHIFT SUMMARY</span>
+          <p>{summary.narrative}</p>
+          {(summary.quality_deviations_note || summary.safety_note) && (
+            <p className="muted small">
+              {summary.quality_deviations_note} {summary.safety_note}
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="tiles">
         <div className="tile"><span>Work steps</span><b>{r.steps}</b><small>avg {r.avg_step_s}s</small></div>
@@ -114,6 +158,8 @@ export default function Report({ report, clips, seek }) {
           <li key={i}><b>{x.title}</b>: saves ~{x.saving_min_per_shift} min/shift. <span className="muted">{x.support}.</span></li>
         ))}
       </ol>
+
+      <RootCause findings={causes} seek={seek} />
 
       {r.longest_step && (
         <>

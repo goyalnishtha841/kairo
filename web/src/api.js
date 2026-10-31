@@ -23,6 +23,14 @@ export const api = {
   skill: (clip) => fetch(`/api/skill?clip=${encodeURIComponent(clip)}`).then(j),
   simulate: (clip, type) => fetch(`/api/simulate?clip=${encodeURIComponent(clip)}&friction_type=${type}`).then(j),
   process: (id) => fetch(`/api/process/${encodeURIComponent(id)}`, { method: "POST" }).then(j),
+  shiftSummary: (clips) => fetch(`/api/shift-summary?clips=${clips.join(",")}`).then(j),
+  rootCause: (clips) => fetch(`/api/root-cause?clips=${clips.join(",")}`).then(j),
+  sopCompliance: (clipId, expectedSteps, mandatory) =>
+    fetch("/api/sop-compliance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clip_id: clipId, expected_steps: expectedSteps, mandatory }),
+    }).then(j),
   upload: (file) => {
     const fd = new FormData();
     fd.append("file", file);

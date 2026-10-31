@@ -153,6 +153,9 @@ h3 { font-size: 14px; }
 .evid { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; }
 
 /* Report */
+.ai-narrative { background: linear-gradient(180deg, rgba(79,209,255,.08), rgba(79,209,255,.02)); border: 1px solid var(--accent); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 18px; }
+.ai-narrative .ai-tag { font-size: 10px; letter-spacing: .08em; color: var(--accent); font-weight: 700; }
+.ai-narrative p { margin: 6px 0 0; }
 .tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
 .tile { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; }
 .tile span { color: var(--fg2); font-size: 12px; }
