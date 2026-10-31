@@ -15,18 +15,23 @@ function Accuracy({ acc }) {
     <>
       <h3 className="sec">Hand-tracking accuracy (human-labelled)</h3>
       <table className="tbl">
-        <thead><tr><th>Measure</th><th>What it means</th>{acc.baseline && <th>Before tuning</th>}<th>Kairo</th></tr></thead>
+        <thead><tr><th>Measure</th><th>What it means</th>{acc.baseline && <th>Before tuning</th>}<th>After tuning (tuning clips)</th>{acc.heldout && <th>Held-out clips</th>}</tr></thead>
         <tbody>
           {rows.map(([name, desc, k]) => (
             <tr key={k}>
               <td>{name}</td><td className="muted">{desc}</td>
               {acc.baseline && <td>{pct(acc.baseline[k])}</td>}
-              <td><b>{pct(acc[k])}</b></td>
+              <td>{pct(acc[k])}</td>
+              {acc.heldout && <td><b>{pct(acc.heldout[k])}</b></td>}
             </tr>
           ))}
         </tbody>
       </table>
-      <p className="muted small">{acc.frames_labelled} frames from {acc.clips} clips labelled by hand ({acc.ground_truth_hands} visible wearer hands), half where the tracker found hands and half where it found none, so misses are counted. Reproduce with <code>python eval/accuracy.py score</code>.</p>
+      <p className="muted small">
+        Tuning set: {acc.frames_labelled} hand-labelled frames from {acc.clips} clips, used to choose the detection threshold and the left/right rule.
+        {acc.heldout && <> Held-out set: {acc.heldout.frames_labelled} frames from {acc.heldout.clips} clips that were never used for tuning; this is the honest number.</>}
+        {" "}Frames are half "tracker found hands", half "found none", so misses count. Reproduce with <code>python eval/accuracy.py score</code> (add <code>--set heldout</code>).
+      </p>
     </>
   );
 }

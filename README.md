@@ -10,7 +10,7 @@ and a shift report.
 - **Never commit footage, frames, or screenshots.** `data/`, `outputs/` and all media are git-ignored.
 - Show results only on the common demo clips. Delete cloud uploads after the event.
 
-See [docs/OVERVIEW.md](docs/OVERVIEW.md) for the problem statement, architecture diagrams and test coverage.
+See [docs/OVERVIEW.md](docs/OVERVIEW.md) for the problem statement and architecture, [docs/TESTING.md](docs/TESTING.md) for data, splits and how to test, and [docs/DEMO.md](docs/DEMO.md) for the 3-minute demo.
 
 ## Layout
 ```

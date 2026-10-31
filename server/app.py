@@ -111,8 +111,13 @@ def engine():
 
 @app.get("/api/accuracy")
 def get_accuracy():
-    p = OUT / "accuracy.json"
-    return json.loads(p.read_text()) if p.exists() else None
+    p, h = OUT / "accuracy.json", OUT / "accuracy_heldout.json"
+    if not p.exists():
+        return None
+    res = json.loads(p.read_text())
+    if h.exists():
+        res["heldout"] = json.loads(h.read_text())
+    return res
 
 
 @app.get("/api/compare")

@@ -23,6 +23,14 @@ BONES = [(0, 1), (1, 2), (2, 3), (3, 4), (0, 5), (5, 6), (6, 7), (7, 8), (5, 9),
          (9, 13), (13, 14), (14, 15), (15, 16), (13, 17), (0, 17), (17, 18), (18, 19), (19, 20)]
 COLOR = {"L": (60, 154, 255), "R": (255, 200, 60)}
 PER_CLIP = 6
+
+# Two disjoint sets. "tune": frames from the clips we tuned thresholds/weights on.
+# "heldout": frames from clips never looked at while tuning (python eval/accuracy.py sample --set heldout CLIP...)
+SET = sys.argv[sys.argv.index("--set") + 1] if "--set" in sys.argv else "tune"
+PREFIX = "" if SET == "tune" else f"{SET}_"
+SAMPLE, LABELS = EVAL / f"{PREFIX}sample.json", EVAL / f"{PREFIX}labels.json"
+RESULT = OUT / ("accuracy.json" if SET == "tune" else f"accuracy_{SET}.json")
+PER_CLIP_SET = {"tune": 6, "heldout": 16}
 TILE = (480, 270)
 
 
@@ -32,23 +40,25 @@ def clips():
 
 
 def sample():
-    rng = random.Random(7)
+    rng = random.Random(7 if SET == "tune" else 11)
     items = []
-    for c in clips():
+    named = [a for a in sys.argv[2:] if not a.startswith("--") and a != SET]
+    per = PER_CLIP_SET.get(SET, PER_CLIP)
+    for c in (named or clips()):
         fr = json.loads((OUT / c / "hands.json").read_text())["frames"]
         hit = [f for f in fr if f["hands"]]
         miss = [f for f in fr if not f["hands"]]
-        k = PER_CLIP // 2
-        pick = rng.sample(hit, min(k, len(hit))) + rng.sample(miss, min(PER_CLIP - min(k, len(hit)), len(miss)))
+        k = per // 2
+        pick = rng.sample(hit, min(k, len(hit))) + rng.sample(miss, min(per - min(k, len(hit)), len(miss)))
         for f in pick:
             items.append({"clip_id": c, "frame": f["frame"], "t": f["t"],
                           "tracked": [{"id": h["id"], "lm": h["lm"]} for h in f["hands"]]})
     rng.shuffle(items)  # mixed order so the labeller can't infer the tracker's answer from position
     for i, it in enumerate(items):
         it["id"] = i
-    (EVAL / "sample.json").write_text(json.dumps(items))
+    SAMPLE.write_text(json.dumps(items))
     render_grids(items)
-    print(f"{len(items)} frames sampled from {len(clips())} clips -> outputs/eval/grid_*.jpg")
+    print(f"{len(items)} frames sampled ({SET}) -> outputs/eval/{PREFIX}grid_*.jpg")
 
 
 def render_grids(items, per=8):
@@ -74,12 +84,12 @@ def render_grids(items, per=8):
         while len(chunk) % 4:
             chunk.append(np.zeros_like(tiles[0]))
         rows = [np.hstack(chunk[r:r + 4]) for r in range(0, len(chunk), 4)]
-        cv2.imwrite(str(d / f"grid_{g // per:02d}.jpg"), np.vstack(rows), [cv2.IMWRITE_JPEG_QUALITY, 85])
+        cv2.imwrite(str(d / f"{PREFIX}grid_{g // per:02d}.jpg"), np.vstack(rows), [cv2.IMWRITE_JPEG_QUALITY, 85])
 
 
 def score():
-    items = {it["id"]: it for it in json.loads((EVAL / "sample.json").read_text())}
-    labels = {int(k): v for k, v in json.loads((EVAL / "labels.json").read_text()).items()
+    items = {it["id"]: it for it in json.loads(SAMPLE.read_text())}
+    labels = {int(k): v for k, v in json.loads(LABELS.read_text()).items()
               if v.get("correct") is not None}  # skip frames awaiting relabel
     det = gt = correct = lr_ok = 0
     frame_ok = 0
@@ -103,10 +113,11 @@ def score():
     res["f1"] = (round(2 * res["precision"] * res["recall"] / (res["precision"] + res["recall"]), 3)
                  if res["precision"] and res["recall"] else None)
     base = EVAL / "baseline_accuracy.json"
-    if base.exists():
+    if base.exists() and SET == "tune":
         res["baseline"] = {k: v for k, v in json.loads(base.read_text()).items()
                            if k in ("precision", "recall", "f1", "left_right_accuracy", "frame_presence_accuracy")}
-    (OUT / "accuracy.json").write_text(json.dumps(res, indent=1))
+    res["set"] = SET
+    RESULT.write_text(json.dumps(res, indent=1))
     print(json.dumps(res, indent=1))
     return res
 
@@ -114,8 +125,8 @@ def score():
 def refresh():
     """After re-running the tracker: pull new detections for the SAME frames, keep human ground truth,
     and re-render only frames whose detections changed (their correct/lr labels need a new look)."""
-    items = json.loads((EVAL / "sample.json").read_text())
-    labels = json.loads((EVAL / "labels.json").read_text())
+    items = json.loads(SAMPLE.read_text())
+    labels = json.loads(LABELS.read_text())
     cache, changed = {}, []
     for it in items:
         fr = cache.setdefault(it["clip_id"], {f["frame"]: f for f in
@@ -127,9 +138,9 @@ def refresh():
             changed.append(it["id"])
             labels[str(it["id"])].update(correct=None, lr_ok=None)
         it["tracked"] = new
-    (EVAL / "sample.json").write_text(json.dumps(items))
-    (EVAL / "labels.json").write_text(json.dumps(labels, indent=0))
-    for f in (OUT / "eval").glob("grid_*.jpg"):
+    SAMPLE.write_text(json.dumps(items))
+    LABELS.write_text(json.dumps(labels, indent=0))
+    for f in (OUT / "eval").glob(f"{PREFIX}grid_*.jpg"):
         f.unlink()
     render_grids([it for it in items if it["id"] in changed])
     print(f"{len(changed)} of {len(items)} frames changed -> relabel ids {changed}")
