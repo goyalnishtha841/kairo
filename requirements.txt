@@ -10,3 +10,4 @@ groq
 anthropic
 python-multipart
 pytest
+webrtcvad-wheels
