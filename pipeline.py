@@ -18,6 +18,8 @@ import copilot  # noqa: E402
 import hands  # noqa: E402
 import sop_labels  # noqa: E402
 import insights  # noqa: E402
+import collaboration  # noqa: E402
+import social  # noqa: E402
 import timeline  # noqa: E402
 import web_proxy  # noqa: E402
 
@@ -34,6 +36,10 @@ def process(clip_id, stride=2, skip_existing=False):
         hands.run(video, stride=stride)
     print(f"[{clip_id}] timeline ...")
     timeline.build(clip_id, keyframes=True)
+    if not (out / "social.json").exists():
+        print(f"[{clip_id}] people, faces and voice activity ...")
+        social.run(video)
+    collaboration.apply(clip_id)
     if ENGINE != "rules":
         print(f"[{clip_id}] captioning SOP steps ({ENGINE}) ...")
         try:

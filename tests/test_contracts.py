@@ -7,9 +7,11 @@ import insights
 
 CLIPS = processed_clips()
 TYPES = {"search", "transit", "idle", "hesitation", "extra_reach", "reattempt", "grasp", "release",
+         "collaboration", "possible_collaboration",
          "tool_use", "step"}
 STATES = {"work", "search", "transit", "idle"}
-SEVERITY = {"search": "red", "transit": "red", "idle": "yellow", "hesitation": "yellow", "extra_reach": "yellow"}
+SEVERITY = {"search": "red", "transit": "red", "idle": "yellow", "hesitation": "yellow", "extra_reach": "yellow",
+            "collaboration": "blue", "possible_collaboration": "blue"}
 
 pytestmark = pytest.mark.skipif(not CLIPS, reason="no processed clips")
 
