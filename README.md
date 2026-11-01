@@ -54,11 +54,13 @@ with a minutes-per-shift number attached. Every claim links to the second of vid
 
 ## Take a look
 
-| Landing page | Overview |
+| Landing page | How Kairo helps, every shift |
 |---|---|
-| ![Landing page: 'You run the factory. Not the stopwatch.'](docs/screenshots/landing-sharp.webp) | ![Overview: time lost, time to win back, fixes and root causes](docs/screenshots/overview-dark.webp) |
-| **Watch a video** | **Fixes & safety** |
-| ![Watch: video with hand tracking, every moment labelled](docs/screenshots/watch-dark.webp) | ![Fixes ranked by time saved, with proof and a preview](docs/screenshots/fixes-dark.webp) |
+| ![Landing page: 'You run the factory. Not the stopwatch.'](docs/screenshots/landing-sharp.webp) | ![Five steps: sees the hands, times every second, learns the steps, grades the work, ranks the fixes](docs/screenshots/how-it-helps.webp) |
+| **Overview** | **Watch a video** |
+| ![Overview: time lost, time to win back, fixes and root causes](docs/screenshots/overview-dark.webp) | ![Watch: video with hand tracking, every moment labelled](docs/screenshots/watch-dark.webp) |
+| **Fixes & safety** | **Live hand-tracking demo** |
+| ![Fixes ranked by time saved, with proof and a preview](docs/screenshots/fixes-dark.webp) | ![See what Kairo sees: try it with your own hands, right on the landing page](docs/screenshots/live-hands.webp) |
 
 ---
 
@@ -146,6 +148,7 @@ manual study that takes days.
 | **Voice input for the copilot** | Ask the copilot out loud (Web Speech API) — useful anywhere typing isn't convenient. |
 | **3D hand skeleton view** | The 2D clip replayed as a depth-aware 3D hand rig, using MediaPipe's own relative-depth signal. |
 | **Open-vocabulary tool detection** | Optional SAM 2 / YOLO-World-style tool masks on keyframes — explicitly labelled unvalidated until measured, never shown as a silent confidence number. |
+| **Live hand-tracking demo** | "See what Kairo sees" on the landing page: hold your hands up to your own webcam and watch the same MediaPipe model track them, entirely in-browser — nothing recorded or uploaded. |
 
 Every number on every screen either came from a measurement stated somewhere in this README, or
 it isn't shown at all. That rule has no exceptions — see [Honest limits](#honest-limits-and-roadmap).
