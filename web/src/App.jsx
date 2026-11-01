@@ -100,7 +100,7 @@ export default function App() {
       <Boot done={!!ready} />
       <header className="top">
         <div className="brand">
-          <span className="logo">◆</span> <b>KAIRO</b>
+          <a href="#/" title="Kairo home" style={{ color: "inherit", textDecoration: "none" }}><span className="logo">◆</span> <b>KAIRO</b></a>
           <span className="tag">Workflow intelligence</span>
         </div>
         <nav className="tabs">
