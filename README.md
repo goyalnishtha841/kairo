@@ -17,8 +17,6 @@ with a minutes-per-shift number attached. Every claim links to the second of vid
 
 ### [▶ Try it live: kairo-61lz.onrender.com](https://kairo-61lz.onrender.com)
 
-<sub>Free hosting sleeps when idle, so the first visit can take about a minute to wake up. The dashboard is at <a href="https://kairo-61lz.onrender.com/#/app">/#/app</a>.</sub>
-
 <br />
 
 <a href="https://kairo-61lz.onrender.com"><img src="docs/screenshots/landing.webp" width="900" alt="The Kairo landing page: 'Instead of evaluating workers, Kairo evaluates the workstation.'" /></a>
