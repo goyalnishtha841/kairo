@@ -43,7 +43,7 @@ export default function Clips({ onProcessed, metrics }) {
       <div className="cmp-h">
         <div>
           <h2>Clips</h2>
-          <p className="muted">Upload a new egocentric video or process downloaded clips. Each runs: hand tracking → head motion → timeline → SOP captions → web video.</p>
+          <p className="muted">Upload a video from a head-mounted camera, or process one already on this computer. Kairo then follows the hands, labels every second and finds the steps.</p>
         </div>
         <div className="row">
           <input ref={fileRef} type="file" accept=".mp4,.mov,.mkv,video/*" onChange={upload} hidden />
@@ -53,7 +53,7 @@ export default function Clips({ onProcessed, metrics }) {
       </div>
       {err && <div className="error">{err}</div>}
       <table className="tbl">
-        <thead><tr><th>Clip</th><th>Size</th><th>Status</th><th>Hands found</th><th>Tracking FPS</th><th></th></tr></thead>
+        <thead><tr><th>Video</th><th>Size</th><th>Status</th><th>Hands seen</th><th>Processing speed</th><th></th></tr></thead>
         <tbody>
           {raw.map((c) => {
             const m = metrics[c.clip_id];
@@ -71,7 +71,7 @@ export default function Clips({ onProcessed, metrics }) {
                 <td>{m ? m.processing_fps : "–"}</td>
                 <td>
                   {!(st === "queued" || st === "running") && (
-                    <button className="ghost sm" onClick={() => process(c.clip_id)}>{c.processed ? "Re-process" : "Process"}</button>
+                    <button className="ghost sm" onClick={() => process(c.clip_id)}>{c.processed ? "Process again" : "Process"}</button>
                   )}
                 </td>
               </tr>
@@ -79,7 +79,7 @@ export default function Clips({ onProcessed, metrics }) {
           })}
         </tbody>
       </table>
-      <p className="muted small">Processing runs on this laptop's CPU (~2 min per 3-min clip), one clip at a time.</p>
+      <p className="muted small">Processing runs on this computer, about 2 minutes for a 3-minute video, one video at a time.</p>
     </div>
   );
 }

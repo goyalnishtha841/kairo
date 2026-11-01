@@ -56,19 +56,19 @@ function Compliance({ clip, seek }) {
 
   return (
     <div className="compliance">
-      <h3 className="sec">SOP compliance check</h3>
+      <h3 className="sec">Check against your written procedure</h3>
       <p className="muted small">
-        Paste the written SOP (one step per line, in order) and check this recording against it:
-        missing steps, out-of-order steps, extra steps, and any skipped mandatory step (e.g. an inspection).
+        Paste your procedure, one step per line and in order. Kairo checks this video for missing,
+        out-of-order and extra steps, and for any must-do step that was skipped (like an inspection).
       </p>
       <div className="row" style={{ alignItems: "flex-start", gap: 16 }}>
         <textarea rows={6} style={{ flex: 1, minWidth: 220 }} placeholder={"Open panel\nDisconnect power\nRemove screw\nInspect\nClose panel"}
                   value={text} onChange={(e) => setText(e.target.value)} />
         <div style={{ flex: 1, minWidth: 220 }}>
-          <label className="muted small" style={{ display: "block", marginBottom: 4 }}>Mandatory steps (comma-separated, must never be skipped)</label>
+          <label className="muted small" style={{ display: "block", marginBottom: 4 }}>Steps that must never be skipped (separate with commas)</label>
           <input style={{ width: "100%" }} placeholder="Inspect" value={mandatory} onChange={(e) => setMandatory(e.target.value)} />
           <button className="ghost" style={{ marginTop: 10 }} disabled={busy || !text.trim()} onClick={check}>
-            {busy ? "Checking…" : "Check compliance"}
+            {busy ? "Checking…" : "Check"}
           </button>
         </div>
       </div>
@@ -79,7 +79,7 @@ function Compliance({ clip, seek }) {
             <b>{result.compliant ? "✓ " : "⚠ "}{result.headline}</b> ({result.adherence_pct}% adherence)
           </p>
           <table className="tbl">
-            <thead><tr><th>Expected step</th><th>Status</th><th>Matched to</th><th>When</th></tr></thead>
+            <thead><tr><th>Step in your procedure</th><th>Result</th><th>Seen as</th><th>When</th></tr></thead>
             <tbody>
               {result.rows.map((row, i) => (
                 <tr key={i}>
@@ -93,7 +93,7 @@ function Compliance({ clip, seek }) {
               ))}
               {result.extra_steps.map((e) => (
                 <tr key={`extra-${e.step_id}`}>
-                  <td className="muted">(extra, not in SOP)</td>
+                  <td className="muted">(extra, not in your procedure)</td>
                   <td>extra</td>
                   <td>{e.label}</td>
                   <td><a className="cite" onClick={() => seek(clip, e.t_start)}>▶ {fmt(e.t_start)}</a></td>
@@ -117,11 +117,11 @@ export default function Sop({ clip, timeline, seek, clips }) {
         <div>
           <h2>Standard Work: {clip}</h2>
           <p className="muted">
-            Generated automatically from hand-object activity: {steps.length} steps, {total.toFixed(0)}s of hands-on work.
-            Use the cleanest clip as the reference SOP and compare other clips against it.
+            Found automatically from what the hands did: {steps.length} steps, {total.toFixed(0)} s of hands-on work.
+            Tip: pick your cleanest video as the good example, then compare others with it.
           </p>
         </div>
-        <button className="ghost" onClick={() => window.print()}>Print SOP</button>
+        <button className="ghost" onClick={() => window.print()}>Print the steps</button>
       </div>
       <div className="steps">
         {steps.map((s) => {
@@ -148,7 +148,7 @@ export default function Sop({ clip, timeline, seek, clips }) {
                     unvalidated)
                   </div>
                 )}
-                {fr.length > 0 && <div className="warn">⚠ {fr.length} friction event{fr.length > 1 ? "s" : ""} in this step</div>}
+                {fr.length > 0 && <div className="warn">⚠ {fr.length} moment{fr.length > 1 ? "s" : ""} of lost time in this step</div>}
               </div>
             </div>
           );

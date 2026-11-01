@@ -4,6 +4,7 @@ import { Dial, Radar } from "../ui.jsx";
 import { Rich } from "./Copilot.jsx";
 
 const PATTERN_CLASS = { "Expert-like": "ok", Developing: "warn", "Beginner-like": "bad" };
+const SHOW = { "Expert-like": "Practised", Developing: "Developing", "Beginner-like": "New to it" };
 const PATTERN_COLOR = { "Expert-like": "var(--green)", Developing: "var(--amber)", "Beginner-like": "var(--red)" };
 const TONE_CLASS = { expert: "ok", typical: "warn", beginner: "bad" };
 
@@ -17,11 +18,11 @@ function ClusterMap({ points, clip, setClip, size = 300 }) {
   return (
     <svg viewBox={`0 0 ${size} ${size}`} className="skmap" role="img" aria-label="Recordings clustered by motion pattern">
       <line x1={pad} y1={size - pad} x2={size - pad} y2={size - pad} stroke="var(--line)" />
-      <text x={size - pad} y={size - 6} textAnchor="end" className="svgmuted">more expert-like →</text>
-      <text x={8} y={pad} className="svgmuted" transform={`rotate(-90 8 ${pad})`} textAnchor="end">working style</text>
+      <text x={size - pad} y={size - 6} textAnchor="end" className="svgmuted">more practised →</text>
+      <text x={8} y={pad} className="svgmuted" transform={`rotate(-90 8 ${pad})`} textAnchor="end">style</text>
       {points.map((p) => (
         <g key={p.clip_id} className="skpt" onClick={() => setClip(p.clip_id)}>
-          <title>{`${p.clip_id}: ${p.pattern}`}</title>
+          <title>{`${p.clip_id}: ${SHOW[p.pattern] || p.pattern}`}</title>
           <circle cx={sx(p.x)} cy={sy(p.y)} r={p.clip_id === clip ? 8 : 5} fill={PATTERN_COLOR[p.pattern]}
                   fillOpacity={p.clip_id === clip ? 1 : 0.7}
                   stroke={p.clip_id === clip ? "var(--fg)" : "none"} strokeWidth="2" />
@@ -39,47 +40,46 @@ export default function Skill({ clip, seek, setClip }) {
     api.skill(clip).then(setP).catch((e) => setErr(e.message));
   }, [clip]);
   if (err) return <div className="error">{err}</div>;
-  if (!p) return <div className="boot-inline">Profiling hand motion…</div>;
+  if (!p) return <div className="boot-inline">Looking at how the hands move…</div>;
   return (
     <div className="prof">
       <div className="cmp-h">
         <div>
           <h2>Motion skill profile · {clip}</h2>
           <p className="muted">
-            Learned without labels from how the hands move, compared with the {p.station_recordings} recording
-            {p.station_recordings === 1 ? "" : "s"} of station {p.station} (reliability: <b>{p.reliability}</b>,
-            {" "}{p.movements} hand movements). {p.note}
+            Learned from {p.movements} hand movements, compared with the other {p.station_recordings - 1} video{p.station_recordings === 2 ? "" : "s"} at this station.
+            {" "}It is about the movement, never the person, and no one is identified.
           </p>
         </div>
       </div>
 
       <div className="prof-top">
         <div className="panel glass prof-score">
-          <Dial value={p.expertise_index} label="expertise index" />
-          <span className={"pill " + PATTERN_CLASS[p.pattern]}>{p.pattern}</span>
-          <p className="muted small">Cluster confidence {Math.round(100 * p.confidence)}%. 50 = the station's typical motion.</p>
+          <Dial value={p.expertise_index} label="hand skill" />
+          <span className={"pill " + PATTERN_CLASS[p.pattern]}>{SHOW[p.pattern] || p.pattern}</span>
+          <p className="muted small">How sure: {Math.round(100 * p.confidence)}%. 50 means usual for this station.</p>
         </div>
         <div className="panel glass">
-          <div className="panel-h"><h3>Motion fingerprint</h3><span className="muted">outer = more expert-like · ring = station</span></div>
+          <div className="panel-h"><h3>Hand movement profile</h3><span className="muted">outside the ring = more practised</span></div>
           <Radar data={p.fingerprint} />
         </div>
         <div className="panel glass">
           <div className="panel-h">
-            <h3>Clusters</h3>
+            <h3>All videos at this station</h3>
             <span className="sklegend">
-              {Object.keys(PATTERN_COLOR).map((k) => <span key={k}><i style={{ background: PATTERN_COLOR[k] }} />{k}</span>)}
+              {Object.keys(PATTERN_COLOR).map((k) => <span key={k}><i style={{ background: PATTERN_COLOR[k] }} />{SHOW[k] || k}</span>)}
             </span>
           </div>
           <ClusterMap points={p.clusters} clip={clip} setClip={setClip} />
         </div>
       </div>
 
-      <div className="panel glass sksum"><Rich text={p.summary} seek={seek} /></div>
+      <div className="panel glass sksum">The hands in this video move like someone who is <b>{(SHOW[p.pattern] || p.pattern).toLowerCase()}</b>, compared with other videos at this station.</div>
 
-      <h3 className="sec">What the hands show</h3>
+      <h3 className="sec">What the hands did</h3>
       <div className="tbl-wrap">
         <table className="tbl">
-          <thead><tr><th>Feature</th><th>This recording</th><th>Station median</th><th>Reads as</th><th>Evidence</th></tr></thead>
+          <thead><tr><th>What</th><th>This video</th><th>Usual</th><th>Looks</th><th>See it</th></tr></thead>
           <tbody>
             {p.features.map((f) => (
               <tr key={f.feature}>
@@ -94,15 +94,19 @@ export default function Skill({ clip, seek, setClip }) {
         </table>
       </div>
 
-      <h3 className="sec">Most similar motion</h3>
+      <h3 className="sec">Videos with similar hand movement</h3>
       <div className="sksim">
         {p.similar.map((s) => (
           <button key={s.clip_id} className="chip" onClick={() => setClip(s.clip_id)}>
-            {s.clip_id} <span className={"pill " + PATTERN_CLASS[s.pattern]}>{s.pattern}</span>
+            {s.clip_id} <span className={"pill " + PATTERN_CLASS[s.pattern]}>{SHOW[s.pattern] || s.pattern}</span>
           </button>
         ))}
       </div>
-      <p className="muted small">{p.method}</p>
+      <details className="more">
+        <summary>How this works</summary>
+        <p>{p.summary}</p>
+        <p>{p.method}</p>
+      </details>
     </div>
   );
 }

@@ -36,19 +36,19 @@ export default function Compare({ clips, seek }) {
       <div className="cmp-h">
         <div>
           <h2>SOP Comparator</h2>
-          <p className="muted">Pick the reference (expert / standard) clip and a clip to check against it.</p>
+          <p className="muted">Pick a good example video, then a video to check against it.</p>
         </div>
         <div className="pickers">
-          <label>Reference<select value={ref} onChange={(e) => setRef(e.target.value)}>{ids.map((i) => <option key={i}>{i}</option>)}</select></label>
+          <label>Good example<select value={ref} onChange={(e) => setRef(e.target.value)}>{ids.map((i) => <option key={i}>{i}</option>)}</select></label>
           <span className="vs">vs</span>
-          <label>Check<select value={tgt} onChange={(e) => setTgt(e.target.value)}>{ids.map((i) => <option key={i}>{i}</option>)}</select></label>
+          <label>Video to check<select value={tgt} onChange={(e) => setTgt(e.target.value)}>{ids.map((i) => <option key={i}>{i}</option>)}</select></label>
         </div>
       </div>
       {err && <div className="error">{err}</div>}
       {res && (
         <>
           <div className="tiles">
-            <div className="tile"><span>SOP adherence</span><b>{res.adherence_pct}%</b><small>reference steps matched</small></div>
+            <div className="tile"><span>Steps followed</span><b>{res.adherence_pct}%</b><small>of the example's steps</small></div>
             <div className="tile"><span>Missing</span><b>{res.counts.missing}</b></div>
             <div className="tile"><span>Out of order</span><b>{res.counts.out_of_order}</b></div>
             <div className="tile"><span>Extra steps</span><b>{res.counts.extra}</b></div>
@@ -58,9 +58,9 @@ export default function Compare({ clips, seek }) {
 
           <div className="grid2 cmp-body">
             <div className="panel">
-              <div className="panel-h"><h3>Step alignment</h3><span className="muted">reference ↔ checked</span></div>
+              <div className="panel-h"><h3>Step by step</h3><span className="muted">example ↔ checked</span></div>
               <table className="tbl flat">
-                <thead><tr><th>Reference</th><th>Checked clip</th><th>Result</th></tr></thead>
+                <thead><tr><th>Example</th><th>Checked video</th><th>Result</th></tr></thead>
                 <tbody>
                   {res.rows.map((r, i) => (
                     <tr key={i}>
@@ -74,12 +74,12 @@ export default function Compare({ clips, seek }) {
               </table>
             </div>
             <div className="panel">
-              <div className="panel-h"><h3>Findings</h3><span className="muted">{res.findings.length}</span></div>
+              <div className="panel-h"><h3>What's different</h3><span className="muted">{res.findings.length}</span></div>
               <ul className="findings">
                 {res.findings.slice(0, 14).map((f, i) => <li key={i}><Rich text={f} seek={seek} /></li>)}
-                {!res.findings.length && <li className="muted">The checked clip follows the reference.</li>}
+                {!res.findings.length && <li className="muted">The checked video follows the example.</li>}
               </ul>
-              <p className="muted small pad">Steps are matched by name and tool (from the vision captions), keeping order. Compare two clips of the same task, e.g. two cycles or two workers.</p>
+              <p className="muted small pad">Steps are matched by their name and order. Compare two videos of the same job, like two runs of one task.</p>
             </div>
           </div>
         </>

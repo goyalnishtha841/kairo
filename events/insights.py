@@ -84,8 +84,8 @@ def analyse(clip_ids, shift_hours=8.0):
         e = top["evidence"][0] if top["evidence"] else None
         headline = (f"Based on {observed / 60:.1f} min of footage, \"{top['title'].lower()}\" could cut cycle "
                     f"time by about {top['cycle_time_reduction_pct']}%, saving ~{top['saving_min_per_shift']} min "
-                    f"per {shift_hours:g}h shift (about EUR {top['roi_eur_per_year']:,} per station per year, "
-                    f"confidence {round(100 * top['confidence'])}%). Supported by {top['support']}"
+                    f"per {shift_hours:g}h shift (confidence {round(100 * top['confidence'])}%). "
+                    f"Supported by {top['support']}"
                     + (f", e.g. {e['clip_id']} at {fmt_t(e['t'])}." if e else "."))
 
     report = {

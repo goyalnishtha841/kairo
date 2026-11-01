@@ -4,7 +4,7 @@ import Copilot from "./Copilot.jsx";
 
 const BONES = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],
   [9,13],[13,14],[14,15],[15,16],[13,17],[0,17],[17,18],[18,19],[19,20]];
-const HAND_COLOR = { L: "#ff9a3c", R: "#3cc8ff" };
+const HAND_COLOR = { L: "#ff8a3d", R: "#ffd2b0" };
 
 function useHandOverlay(clip, videoRef, canvasRef, enabled) {
   const [track, setTrack] = useState(null);
@@ -85,9 +85,9 @@ function FrictionTimeline({ timeline, now, onSeek }) {
         {["work", "search", "transit", "idle"].map((k) => (
           <span key={k}><i style={{ background: COLOR[k] }} />{LABEL[k]}</span>
         ))}
-        <span><i className="dot" />Hesitation / extra reach / repeated correction</span>
-        <span><i style={{ background: "var(--blue)" }} />Collaboration</span>
-        <span className="muted">Numbered blocks = SOP steps</span>
+        <span><i className="dot" />Small hold-ups (pausing, extra reaching, picking up again)</span>
+        <span><i style={{ background: "var(--blue)" }} />Working together</span>
+        <span className="muted">Numbers = steps of the job</span>
       </div>
     </div>
   );
@@ -100,12 +100,12 @@ function Attention({ clip }) {
   const rows = Object.entries(hm.pct).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
   const ZONE_LABEL = { machine: "Machine / work", tool_search_left: "Tool search (left)",
     tool_search_center: "Tool search (center)", tool_search_right: "Tool search (right)",
-    colleague: "Colleague", floor_or_away: "Idle / away" };
+    colleague: "Another person", floor_or_away: "Away / waiting" };
   const ZONE_COLOR = { machine: "var(--green)", tool_search_left: "var(--red)", tool_search_center: "var(--red)",
     tool_search_right: "var(--red)", colleague: "var(--blue)", floor_or_away: "var(--amber)" };
   return (
     <div className="panel attention">
-      <div className="panel-h"><h3>Attention</h3><span className="muted">where the camera pointed</span></div>
+      <div className="panel-h"><h3>Where the worker looked</h3><span className="muted">from head direction</span></div>
       <div className="stack">
         {rows.map(([k, v]) => <div key={k} style={{ width: `${v}%`, background: ZONE_COLOR[k] }} title={`${ZONE_LABEL[k] || k} ${v}%`} />)}
       </div>
@@ -128,7 +128,7 @@ function DigitalTwin({ clip, seek }) {
   return (
     <div className="panel twin">
       <div className="panel-h" style={{ cursor: "pointer" }} onClick={() => setOpen(!open)}>
-        <h3>Digital twin timeline</h3><span className="muted">{open ? "hide" : "show"} narrated story ▾</span>
+        <h3>The story of this video</h3><span className="muted">{open ? "hide" : "show"} ▾</span>
       </div>
       {open && !dt && <div className="muted small pad">Loading…</div>}
       {open && dt && (
@@ -176,7 +176,7 @@ export default function Analyze({ clip, timeline, videoRef, onVideoReady, seek, 
           )}
         </div>
         <div className="row between">
-          <label className="toggle"><input type="checkbox" checked={overlay} onChange={(e) => setOverlay(e.target.checked)} /> Hand tracking overlay</label>
+          <label className="toggle"><input type="checkbox" checked={overlay} onChange={(e) => setOverlay(e.target.checked)} /> Show hand tracking</label>
           <div className="kpis">
             {Object.entries(totals).map(([k, v]) => (
               <span key={k} className="kpi"><i style={{ background: COLOR[k] }} />{LABEL[k]} <b>{Math.round((100 * v) / timeline.duration_s)}%</b></span>
@@ -189,7 +189,7 @@ export default function Analyze({ clip, timeline, videoRef, onVideoReady, seek, 
       <section className="right">
         <div className="panel events">
           <div className="panel-h">
-            <h3>Events <span className="muted">({friction.length})</span></h3>
+            <h3>Moments <span className="muted">({friction.length})</span></h3>
             <select value={filter} onChange={(e) => setFilter(e.target.value)}>
               <option value="all">All</option>
               {["search", "transit", "idle", "hesitation", "extra_reach", "reattempt", "collaboration", "possible_collaboration"].map((k) => <option key={k} value={k}>{LABEL[k]}</option>)}
@@ -202,7 +202,7 @@ export default function Analyze({ clip, timeline, videoRef, onVideoReady, seek, 
                 <span className="body"><b>{LABEL[e.type]}</b> {(e.t_end - e.t_start).toFixed(1)}s<small>{e.note}</small></span>
               </button>
             ))}
-            {!shown.length && <div className="muted pad">No events.</div>}
+            {!shown.length && <div className="muted pad">Nothing here.</div>}
           </div>
         </div>
         <Attention clip={clip} />

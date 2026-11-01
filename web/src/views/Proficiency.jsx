@@ -4,6 +4,8 @@ import { Dial, Radar } from "../ui.jsx";
 import { Rich } from "./Copilot.jsx";
 
 const LEVEL_CLASS = { Advanced: "ok", Intermediate: "warn", "Needs training": "bad" };
+// the backend's levels describe the workflow; say so plainly (never "needs training", which sounds like the person)
+const LEVEL_TEXT = { Advanced: "Better than usual", Intermediate: "About usual", "Needs training": "Below usual" };
 
 function Drift({ clip }) {
   const [d, setD] = useState(null);
@@ -11,7 +13,7 @@ function Drift({ clip }) {
   if (!d) return null;
   return (
     <>
-      <h3 className="sec">Behaviour vs this station's own recent history (adaptive baseline)</h3>
+      <h3 className="sec">Is it changing over time?</h3>
       <div className="panel glass pad">
         {d.prior_clips.length === 0 ? (
           <p className="muted small">{d.headline}</p>
@@ -23,16 +25,14 @@ function Drift({ clip }) {
               </span>{" "}{d.headline}
             </p>
             <p className="muted small">
-              {d.today_active_work_s}s active work vs a {d.baseline_active_work_s}s median from
-              {" "}{d.prior_clips.length} prior recording{d.prior_clips.length > 1 ? "s" : ""} of this station
-              ({d.prior_clips.join(", ")}).
+              {Math.round(d.today_active_work_s)} s of active work, against a usual {Math.round(d.baseline_active_work_s)} s
+              {" "}from {d.prior_clips.length} earlier video{d.prior_clips.length > 1 ? "s" : ""} at this station.
             </p>
             {d.drifted && d.possible_reasons.length > 0 && (
               <ul className="replist">
                 {d.possible_reasons.map((r, i) => <li key={i}>{r}</li>)}
               </ul>
             )}
-            <p className="muted small">{d.method}</p>
           </>
         )}
       </div>
@@ -48,7 +48,7 @@ export default function Proficiency({ clip, seek, setClip }) {
     api.proficiency(clip).then(setP).catch((e) => setErr(e.message));
   }, [clip]);
   if (err) return <div className="error">{err}</div>;
-  if (!p) return <div className="boot-inline">Comparing this workflow with the station baseline…</div>;
+  if (!p) return <div className="boot-inline">Comparing with how this station usually runs…</div>;
   const maxCurve = 100;
   return (
     <div className="prof">
@@ -56,24 +56,23 @@ export default function Proficiency({ clip, seek, setClip }) {
         <div>
           <h2>Workflow proficiency · {clip}</h2>
           <p className="muted">
-            Compared with {p.baseline_recordings} other recording{p.baseline_recordings === 1 ? "" : "s"} of {p.baseline_scope === "station" ? `station ${p.station}` : "all stations"}
-            {" "}(baseline reliability: <b>{p.baseline_reliability}</b>). {p.level_note}
+            Compared with {p.baseline_recordings} other video{p.baseline_recordings === 1 ? "" : "s"} from {p.baseline_scope === "station" ? "this station" : "all stations"}. It describes the video, not the person.
           </p>
         </div>
       </div>
 
       <div className="prof-top">
         <div className="panel glass prof-score">
-          <Dial value={p.score} label="workflow score" />
-          <span className={"pill " + LEVEL_CLASS[p.level]}>{p.level}</span>
-          <p className="muted small">50 = the station's typical workflow. ≥{p.thresholds.advanced} Advanced, &lt;{p.thresholds.needs_training} Needs training.</p>
+          <Dial value={p.score} label="score vs usual" />
+          <span className={"pill " + LEVEL_CLASS[p.level]}>{LEVEL_TEXT[p.level] || p.level}</span>
+          <p className="muted small">50 means usual for this station. Higher is better.</p>
         </div>
         <div className="panel glass">
-          <div className="panel-h"><h3>Skill fingerprint</h3><span className="muted">outer = better than baseline · ring = baseline</span></div>
+          <div className="panel-h"><h3>Better or worse than usual</h3><span className="muted">outside the ring = better</span></div>
           <Radar data={p.fingerprint} />
         </div>
         <div className="panel glass">
-          <div className="panel-h"><h3>Score across recordings</h3><span className="muted">{p.station}</span></div>
+          <div className="panel-h"><h3>Every video at this station</h3><span className="muted">{p.station}</span></div>
           <div className="curve">
             {p.curve.map((c) => (
               <button key={c.clip_id} className={"cbar" + (c.clip_id === clip ? " on" : "")} title={`${c.clip_id}: ${c.score}`}
@@ -83,14 +82,14 @@ export default function Proficiency({ clip, seek, setClip }) {
               </button>
             ))}
           </div>
-          <p className="muted small">Recordings in order. If they are sequential sessions, this is a learning curve.</p>
+          <p className="muted small" style={{ padding: "0 18px 14px" }}>In recording order. Click a bar to open that video.</p>
         </div>
       </div>
 
-      <h3 className="sec">Why this score</h3>
+      <h3 className="sec">What makes up the score</h3>
       <div className="tbl-wrap">
         <table className="tbl">
-          <thead><tr><th>Metric</th><th>This workflow</th><th>Baseline</th><th>Sub-score</th><th>Explanation and evidence</th></tr></thead>
+          <thead><tr><th>What</th><th>This video</th><th>Usual</th><th>Score</th><th>Why, with moments to watch</th></tr></thead>
           <tbody>
             {p.metrics.map((m) => (
               <tr key={m.metric}>
@@ -98,13 +97,16 @@ export default function Proficiency({ clip, seek, setClip }) {
                 <td className="num">{m.value}{m.unit}</td>
                 <td className="num muted">{m.baseline}{m.unit}</td>
                 <td><span className={"pill " + (m.direction === "better" ? "ok" : m.direction === "worse" ? "bad" : "warn")}>{m.subscore}</span></td>
-                <td><Rich text={m.explanation + (m.evidence.length ? " " + m.evidence.join(" ") : "")} seek={seek} /></td>
+                <td><Rich text={m.explanation.replace(/baseline/g, "usual") + (m.evidence.length ? " " + m.evidence.join(" ") : "")} seek={seek} /></td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <p className="muted small">{p.method} Collaboration in this recording: {p.context.collaboration_s_per_min} s/min (context only, not scored).</p>
+      <details className="more">
+        <summary>How this score works</summary>
+        <p>{p.method} Working together in this video: {p.context.collaboration_s_per_min} s per minute (shown for context, not scored).</p>
+      </details>
 
       <Drift clip={clip} />
     </div>

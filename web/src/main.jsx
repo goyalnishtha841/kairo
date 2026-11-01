@@ -2,8 +2,11 @@ import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
 import Landing from "./landing/Landing.jsx";
+import { applyTheme, initialTheme } from "./theme.js";
 import "./styles.css";
 import "./hud.css";
+
+applyTheme(initialTheme());   // before the first paint, so the dashboard never flashes the wrong theme
 
 // "/" is the landing page, "#/app" the dashboard
 const isApp = () => window.location.hash.startsWith("#/app");
