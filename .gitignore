@@ -17,6 +17,9 @@ outputs/
 !web/public/videos/
 !web/public/videos/*.mp4
 !web/public/videos/*.jpg
+# README walkthrough recording of the landing page (no dataset footage)
+!docs/media/
+!docs/media/*.mp4
 
 # models
 models/*.task
