@@ -5,8 +5,15 @@ smaller 640x360 copy of each playback video into one tar.gz. The archive is atta
 Release and the Dockerfile unpacks it into outputs/ at build time, so the data is part of every
 deploy and survives restarts (Render's free disk is wiped on each deploy).
 
-Usage: python scripts/build_sample_data.py <work dir> [archive name]
+The score caches are shipped too. Each records the mtimes of timeline.json and hands.json it was
+computed from, so those mtimes are set to whole seconds (tar always keeps whole seconds) and the
+cache stamps rewritten to match; on the server the caches are then valid as soon as the archive is
+unpacked. Videos already encoded in <work dir> are reused unless --reencode is given.
+
+Usage: python scripts/build_sample_data.py <work dir> [archive name] [--reencode]
 """
+import json
+import os
 import shutil
 import subprocess
 import sys
@@ -18,26 +25,39 @@ import imageio_ffmpeg
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "outputs"
 KEEP = ("timeline.json", "hands.json", "metrics.json", "social.json", "tools.json")
+# score caches, shipped so the first visitor after a restart doesn't wait for them to be recomputed
+CACHES = ("proficiency_metrics.json", "skill_features.json")
 TOP = ("shift_report.json", "accuracy.json", "accuracy_heldout.json", "verification.json")
 
 
-def main(work, name="kairo-sample-data-v1.tar.gz"):
+def main(work, name="kairo-sample-data-v1.tar.gz", reencode=False):
     work = Path(work)
     stage = work / "outputs"
-    if stage.exists():
+    if reencode and stage.exists():
         shutil.rmtree(stage)
-    stage.mkdir(parents=True)
+    stage.mkdir(parents=True, exist_ok=True)
     ff = imageio_ffmpeg.get_ffmpeg_exe()
     clips = sorted(p.parent.name for p in OUT.glob("*/timeline.json") if not p.parent.name.startswith("zz-"))
     for c in clips:
         src, dst = OUT / c, stage / c
-        dst.mkdir()
+        dst.mkdir(exist_ok=True)
         for f in KEEP:
             if (src / f).exists():
                 shutil.copy2(src / f, dst / f)
-        if (src / "frames").exists():
+        stamp = []
+        for f in ("timeline.json", "hands.json"):   # same order the caches use
+            if (dst / f).exists():
+                t = int((dst / f).stat().st_mtime)
+                os.utime(dst / f, (t, t))
+                stamp.append(float(t))
+        for f in CACHES:
+            if (src / f).exists():
+                cache = json.loads((src / f).read_text())
+                cache["stamp"] = stamp
+                (dst / f).write_text(json.dumps(cache))
+        if (src / "frames").exists() and not (dst / "frames").exists():
             shutil.copytree(src / "frames", dst / "frames")
-        if (src / "web.mp4").exists():
+        if (src / "web.mp4").exists() and (reencode or not (dst / "web.mp4").exists()):
             subprocess.run([ff, "-hide_banner", "-loglevel", "error", "-y", "-i", str(src / "web.mp4"), "-an",
                             "-vf", "scale=640:-2", "-c:v", "libx264", "-preset", "slow", "-crf", "32",
                             "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(dst / "web.mp4")], check=True)
@@ -52,4 +72,5 @@ def main(work, name="kairo-sample-data-v1.tar.gz"):
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:])
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    main(*args, reencode="--reencode" in sys.argv)
