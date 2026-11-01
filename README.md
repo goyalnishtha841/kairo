@@ -19,7 +19,7 @@ with a minutes-per-shift number attached. Every claim links to the second of vid
 
 <br />
 
-<a href="https://kairo-61lz.onrender.com"><img src="docs/screenshots/how-it-helps-v2.webp" width="900" alt="The Kairo landing page: Here's how Kairo helps, every shift" /></a>
+<a href="https://kairo-61lz.onrender.com"><img src="docs/screenshots/how-it-helps-v3.webp" width="900" alt="The Kairo landing page: Here's how Kairo helps, every shift" /></a>
 
 <sub>Built for the **BIOS Hackathon 2026** by team **DefectIQ**.</sub>
 
@@ -56,9 +56,9 @@ with a minutes-per-shift number attached. Every claim links to the second of vid
 
 | Landing page | Overview |
 |---|---|
-| ![Landing page: Here's how Kairo helps, every shift](docs/screenshots/how-it-helps-v2.webp) | ![Overview: time lost, time to win back, fixes and root causes](docs/screenshots/overview-dark.webp) |
+| ![Landing page: Here's how Kairo helps, every shift](docs/screenshots/how-it-helps-v3.webp) | ![Overview: time lost, time to win back, fixes and root causes](docs/screenshots/overview-dark.webp) |
 | **Watch a video** | **Live hand-tracking demo** |
-| ![Watch: video with hand tracking, every moment labelled](docs/screenshots/watch-dark.webp) | ![See what Kairo sees: try it with your own hands, right on the landing page](docs/screenshots/live-hands-v2.webp) |
+| ![Watch: video with hand tracking, every moment labelled](docs/screenshots/watch-dark.webp) | ![See what Kairo sees: try it with your own hands, right on the landing page](docs/screenshots/live-hands-v3.webp) |
 
 ---
 
