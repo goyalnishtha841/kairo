@@ -33,6 +33,16 @@ COPY . .
 # outputs/, data/raw/ etc. are excluded by .dockerignore; this just lays the built frontend on top.
 COPY --from=webbuild /app/web/dist ./web/dist
 
+# Sample recordings, baked into the image so every visitor sees them and they survive restarts
+# (Render's free disk is wiped on each deploy). Built by scripts/build_sample_data.py and attached
+# to a GitHub Release; bump the tag to ship a new data set. Set SAMPLE_DATA_URL="" to build without it.
+ARG SAMPLE_DATA_URL=https://github.com/goyalnishtha841/kairo/releases/download/sample-data-v1/kairo-sample-data-v1.tar.gz
+RUN if [ -n "$SAMPLE_DATA_URL" ]; then \
+      python -c "import sys, urllib.request; urllib.request.urlretrieve(sys.argv[1], '/tmp/sample.tar.gz')" "$SAMPLE_DATA_URL" \
+      && tar -xzf /tmp/sample.tar.gz -C /app && rm /tmp/sample.tar.gz \
+      && echo "sample data: $(ls /app/outputs | wc -l) entries"; \
+    fi
+
 ENV PORT=8000
 EXPOSE 8000
 # shell form so ${PORT} expands -- Render (and most PaaS hosts) inject PORT at runtime and expect
