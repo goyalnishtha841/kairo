@@ -31,15 +31,13 @@ Built for the **BIOS Hackathon 2026** by team **DefectIQ**.
 
 ## Screenshots
 
-**Landing page, scrolled top to bottom** ([watch as MP4](docs/media/landing-scroll.mp4))
+**Landing page, scrolled top to bottom** ([watch in 4K](docs/media/landing-scroll-4k.mp4))
 
 ![Scrolling through the Kairo landing page](docs/media/landing-scroll.webp)
 
-| Landing page | Overview |
+| Dashboard: Overview | Dashboard: Watch a video |
 |---|---|
-| ![Landing page](docs/screenshots/landing.webp) | ![Overview: time lost, time to win back, fixes and root causes](docs/screenshots/overview.webp) |
-| **Watch a video** | **Fixes & safety** |
-| ![Watch: video with hand tracking, every moment labelled](docs/screenshots/watch.webp) | ![Fixes ranked by time saved, with proof and a preview](docs/screenshots/fixes.webp) |
+| ![Overview: time lost, time to win back, fixes and root causes](docs/screenshots/overview.webp) | ![Watch: video with hand tracking, every moment labelled](docs/screenshots/watch.webp) |
 
 ---
 
