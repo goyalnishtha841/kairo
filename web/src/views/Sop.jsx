@@ -129,7 +129,8 @@ export default function Sop({ clip, timeline, seek, clips }) {
           return (
             <div key={s.step_id} className="step" onClick={() => seek(clip, s.t_start)}>
               <div className="thumb">
-                {s.keyframe ? <img src={api.frame(clip, s.keyframe)} alt="" loading="lazy" /> : <div className="noimg" />}
+                {s.keyframe ? <img src={api.frame(clip, s.tool_mask || s.keyframe)} alt="" loading="lazy" /> : <div className="noimg" />}
+                {s.tool_mask && <span className="mask-badge" title={s.tool_mask_note}>SAM 2 mask</span>}
                 <span className="num">{s.step_id}</span>
                 <span className="dur">{s.duration_s.toFixed(1)}s</span>
               </div>

@@ -53,8 +53,15 @@ Coordinates are normalised image coords (0..1). `lm` = smoothed, `lm_raw` = befo
 `flow` (median flow, ~walking), `sharp` (Laplacian variance, low = motion blur), `ok`.
 
 ## Tool detection (unvalidated, additive)
-`events/apply_tools.py` adds three optional fields to each `steps[]` entry when a station has
+`events/apply_tools.py` adds four optional fields to each `steps[]` entry when a station has
 `events/config.py STATION_TOOLS` configured: `tool_detected` (string or null), `tool_detected_confidence`
-(0-1), `tool_detection_note` (a fixed honesty string, or null). This is a separate field from the
-existing `tool` (the VLM caption's guess) -- one unvalidated guess never silently overwrites the
-other. See `perception/tools.py` for why neither is measured against held-out accuracy yet.
+(0-1), `tool_detected_box` (normalised `{cx,cy,w,h}` or null, the representative detection used as
+SAM's box prompt), `tool_detection_note` (a fixed honesty string, or null). This is a separate field
+from the existing `tool` (the VLM caption's guess) -- one unvalidated guess never silently overwrites
+the other. See `perception/tools.py` for why neither is measured against held-out accuracy yet.
+
+`events/tool_mask.py` adds two more, only for steps with a `tool_detected_box` and a saved keyframe:
+`tool_mask` (a path under `frames/`, an overlay JPEG with the SAM 2 mask blended in) and
+`tool_mask_note` (a fixed honesty string). A single-keyframe box-prompted SAM 2 (tiny, CPU) mask, not
+the full video predictor with memory propagation -- and it inherits the upstream box's own
+uncertainty, so it is never shown without the same "unvalidated" framing.

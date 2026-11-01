@@ -56,7 +56,11 @@ def process(clip_id, stride=2, skip_existing=False):
             import tools as tool_detect  # lazy: pulls in ultralytics + CLIP only when actually configured
             import apply_tools
             tool_detect.run(video, tool_classes)
-            apply_tools.apply(clip_id)
+            n = apply_tools.apply(clip_id)
+            if n:
+                print(f"[{clip_id}] tool masks (SAM 2 tiny, unvalidated) ...")
+                import tool_mask
+                tool_mask.generate(clip_id)
         except Exception as e:  # optional dependency / model download failure never blocks the pipeline
             print(f"[{clip_id}] tool detection skipped: {type(e).__name__}: {e}")
     if ENGINE != "rules":

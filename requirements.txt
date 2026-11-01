@@ -12,5 +12,6 @@ python-multipart
 pytest
 webrtcvad-wheels
 reportlab
-# optional: tool detector (open-vocabulary, unvalidated -- see events/tools.py)
+# optional: tool detector + SAM 2 tool masks (open-vocabulary, unvalidated -- see
+# perception/tools.py and events/tool_mask.py)
 ultralytics

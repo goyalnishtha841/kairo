@@ -47,12 +47,16 @@ def _nearest_hand_dist(cx, cy, hand_pos):
 
 
 def tool_for_step(step, tool_samples, hand_frames):
+    """Returns (label, mean_confidence, best_box) for the tool detected most often near the working
+    hand during this step. best_box (a single representative detection box, for SAM's box prompt)
+    is the winning label's highest-confidence detection -- not an average, since a box prompt needs
+    one real box, not a blended fiction."""
     a, b = step["t_start"], step["t_end"]
     window_hands = [(t, hp) for t, hp in hand_frames if a <= t <= b and hp]
     if not window_hands:
-        return None, 0.0
+        return None, 0.0, None
     labels = Counter()
-    confs = {}
+    confs, boxes = {}, {}
     for s in tool_samples:
         if not (a <= s["t"] <= b) or not s["detections"]:
             continue
@@ -63,10 +67,13 @@ def tool_for_step(step, tool_samples, hand_frames):
             if dist is not None and dist <= C.TOOL_HAND_MAX_DIST:
                 labels[d["label"]] += 1
                 confs.setdefault(d["label"], []).append(d["score"])
+                best = boxes.get(d["label"])
+                if best is None or d["score"] > best["score"]:
+                    boxes[d["label"]] = {**d, "t": s["t"]}
     if not labels:
-        return None, 0.0
+        return None, 0.0, None
     top, _ = labels.most_common(1)[0]
-    return top, round(float(np.mean(confs[top])), 2)
+    return top, round(float(np.mean(confs[top])), 2), boxes[top]
 
 
 def apply(clip_id):
@@ -80,10 +87,12 @@ def apply(clip_id):
 
     n = 0
     for step in tl["steps"]:
-        label, conf = tool_for_step(step, tools["samples"], hand_frames)
+        label, conf, box = tool_for_step(step, tools["samples"], hand_frames)
         step["tool_detected"] = label
         step["tool_detected_confidence"] = conf
         step["tool_detection_note"] = NOTE if label else None
+        step["tool_detected_box"] = ({"cx": box["cx"], "cy": box["cy"], "w": box["w"], "h": box["h"]}
+                                     if box else None)
         if label:
             n += 1
     tl_path.write_text(json.dumps(tl, indent=1))
