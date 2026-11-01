@@ -12,6 +12,12 @@ outputs/
 *.png
 *.gif
 
+# landing page media: our own hero clip and a Mixkit Free-licence clip, not dataset footage.
+# (Sample recordings are published separately as a GitHub Release file; see scripts/build_sample_data.py.)
+!web/public/videos/
+!web/public/videos/*.mp4
+!web/public/videos/*.jpg
+
 # models
 models/*.task
 *.pt
