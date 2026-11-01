@@ -51,6 +51,26 @@ npm --prefix web run dev                          # http://localhost:5173
 ```
 For a single-server demo: `npm --prefix web run build`, then just run uvicorn and open http://localhost:8000.
 
+## Deploy
+One container, one process: FastAPI serves the API and the built frontend from the same origin
+(no CORS setup needed), CPU only, no GPU plan required.
+
+```bash
+docker build -t kairo .
+docker run -p 8000:8000 --env-file .env kairo   # GROQ_API_KEY / ANTHROPIC_API_KEY are optional
+```
+
+On [Render](https://render.com): New → Blueprint → pick this repo (`render.yaml` is already set
+up). Any Docker-capable host (Railway, Fly.io, a plain VM) works the same way -- build the
+`Dockerfile`, run it, point it at a persistent disk for `outputs/` if you want processed clips to
+survive a restart.
+
+The image installs `requirements-deploy.txt`, not `requirements.txt`: it skips `ultralytics`
+(pulls in `torch`, several hundred MB) since the tool detector and SAM 2 masks it powers are
+optional, lazy-imported, and off until a station's `STATION_TOOLS` is configured anyway (see
+`events/config.py`). Deploying somewhere with the headroom for those features too just needs
+`pip install ultralytics` on top.
+
 ### AI engines (picked automatically: Groq → Claude → rules)
 - **Groq** (`GROQ_API_KEY` in `.env`): copilot on `openai/gpt-oss-120b` with tool calls over the timeline;
   SOP step names + tools from keyframes with `qwen/qwen3.8-27b` (vision).

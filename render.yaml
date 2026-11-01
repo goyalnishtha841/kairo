@@ -1,0 +1,19 @@
+# Render blueprint: https://render.com/docs/blueprint-spec
+# One service, Docker-built from the repo's own Dockerfile -- frontend and API in one process,
+# same origin, no CORS setup needed. CPU only, no GPU plan required.
+#
+# To use: push this repo to GitHub, then on Render: New -> Blueprint -> pick this repo.
+# GROQ_API_KEY / ANTHROPIC_API_KEY are optional -- leave them unset and the copilot falls back to
+# a deterministic rules engine with no external calls at all.
+services:
+  - type: web
+    name: kairo
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/engine
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false

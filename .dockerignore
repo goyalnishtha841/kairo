@@ -1,0 +1,25 @@
+# Keep the build context small and never ship footage/outputs in the image.
+.git
+.github
+
+data/
+frames/
+outputs/
+
+models/
+*.pt
+*.onnx
+
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+web/node_modules/
+web/dist/
+web/.vite/
+
+*.sqlite
+*.db
+.DS_Store

@@ -1,0 +1,22 @@
+# Deployment image dependencies -- everything in requirements.txt EXCEPT ultralytics.
+#
+# ultralytics pulls in torch (several hundred MB) for two optional, lazy-imported features
+# (perception/tools.py's open-vocabulary tool detector and events/tool_mask.py's SAM 2 masks).
+# Both need a station's STATION_TOOLS configured before they do anything at all (see
+# events/config.py), so they are never on the hot path for the core demo, and installing torch
+# unconditionally on a free-tier host risks blowing the memory/disk budget for a feature that
+# is off by default. If you deploy somewhere with the headroom and want those features live,
+# install requirements.txt instead (or `pip install ultralytics` on top of this file).
+mediapipe>=0.10.14
+opencv-python
+numpy
+fastapi
+uvicorn
+gdown
+imageio-ffmpeg
+groq
+# optional: Claude engine
+anthropic
+python-multipart
+webrtcvad-wheels
+reportlab
