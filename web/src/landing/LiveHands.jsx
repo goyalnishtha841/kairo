@@ -96,7 +96,7 @@ export default function LiveHands() {
       ctx.clearRect(0, 0, w, h);
       let speed = 0;
       res.landmarks.forEach((lm, k) => {
-        ctx.strokeStyle = k ? "#ffb27a" : "#ff8a3d";
+        ctx.strokeStyle = k ? "#99f6e4" : "#2dd4bf";
         ctx.lineWidth = Math.max(3, w / 220);
         ctx.lineCap = "round";
         for (const [a, b] of BONES) {
