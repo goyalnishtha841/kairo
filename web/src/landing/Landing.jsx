@@ -8,7 +8,7 @@ const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matc
 // Unsplash photos (Unsplash License: free for commercial use, no attribution required)
 const img = (id, w = 1400) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=80`;
 // Mixkit stock video (Mixkit Free License, commercial use, no attribution), stored in web/public/videos:
-// hero-dark = mixkit 3916 "hand of a person in the dark through colored lights",
+// hero-dark = video supplied by the team (hands assembling parts at a dark workbench),
 // cta-night = mixkit 4360 "petrochemical plant lit up at night"
 const HERO_VIDEO = "/videos/hero-dark.mp4";
 
@@ -71,7 +71,7 @@ function Nav() {
 const TOASTS = [
   "Spotted 7 seconds of searching for a tool",
   "Found 26 minutes of waiting per shift",
-  "Suggested a fix worth €6,977 a year",
+  "Suggested a fix that saves 26 minutes a shift",
   "Rated step 5 at 87 out of 100",
   "Tracked both hands at the workbench",
 ];
@@ -117,11 +117,13 @@ const STACK = [
    "1504328345606-18bbc8c9d7d1"],
   ["Spots where time slips away",
    "Searching for a tool, waiting for parts, pausing between steps. Every moment is marked, so you can jump straight to it in the video.",
-   "1565954786194-d22abeaac3ae"],
+   "/images/grinding-sparks.webp", "40% 40%"],
   ["Tells you what to fix first",
    "Clear, ranked suggestions, like keeping the most-used tools within reach, each with the minutes and money it saves.",
-   "1666886573256-ff093806ec6b"],
+   "/images/foundry-pour.webp", "72% 50%"],
 ];
+// an Unsplash photo id, or a path to one of our own images in web/public/images
+const photoSrc = (photo) => (photo.startsWith("/") ? photo : img(photo, 1200));
 
 function Stack() {
   const ref = useRef(null);
@@ -148,7 +150,7 @@ function Stack() {
     <section className="lp-cream lp-stack-sec" id="solutions">
       <Words text={"An extra pair of eyes\non every workstation"} className="lp-h2 lp-center" />
       <div className="lp-stack" ref={ref}>
-        {STACK.map(([h, p, photo], i) => (
+        {STACK.map(([h, p, photo, focus], i) => (
           <div key={h} className="lp-stack-card" style={{ top: `${90 + i * 14}px` }}>
             <div className={"lp-stack-inner" + (i % 2 ? " flip" : "")}>
               <div className="lp-stack-text">
@@ -156,7 +158,9 @@ function Stack() {
                 <h3>{h}</h3>
                 <p>{p}</p>
               </div>
-              <div className="lp-stack-img"><img src={img(photo, 1200)} alt="" loading="lazy" /></div>
+              <div className="lp-stack-img">
+                <img src={photoSrc(photo)} alt="" loading="lazy" style={focus ? { objectPosition: focus } : undefined} />
+              </div>
             </div>
           </div>
         ))}
@@ -245,9 +249,9 @@ function HowItWorks() {
         </article>
         <article className="lp-card" data-reveal style={{ transitionDelay: ".08s" }}>
           <div className="lp-mock">
-            <div className="lp-mock-row"><span>Cut waiting time</span><b>€6,977 a year</b></div>
+            <div className="lp-mock-row"><span>Cut waiting time</span><b>26 min / shift</b></div>
             <div className="lp-bar"><i style={{ width: "83%" }} /></div>
-            <div className="lp-mock-row small"><span>Saves ~26 minutes per shift</span><span>83% sure</span></div>
+            <div className="lp-mock-row small"><span>Waiting for parts or machines</span><span>83% sure</span></div>
             <div className="lp-mock-ok">Seen in 15 of 19 videos ✓</div>
           </div>
           <h3>Suggests the fix</h3>

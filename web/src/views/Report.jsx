@@ -1,5 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { api, fmt, LABEL } from "../api.js";
+import { CAUSE, mins } from "./Overview.jsx";
+
+// a root-cause finding in plain words: [what happens, why, what to try]
+const cause = (f) => CAUSE[f.pattern] || [f.step_label, f.root_cause, f.fix];
 
 const pct = (x) => (x == null ? "–" : `${Math.round(x * 100)}%`);
 
@@ -88,12 +92,12 @@ function RootCause({ findings, seek }) {
   if (!findings) return null;
   return (
     <>
-      <h3 className="sec">Root cause analysis</h3>
+      <h3 className="sec">Why it happens</h3>
       {findings.length ? (
         <ol className="replist">
           {findings.slice(0, 5).map((f, i) => (
             <li key={i}>
-              <b>{f.step_label}</b> ({f.clip_id}): {f.root_cause} <span className="muted">Fix: {f.fix}</span>{" "}
+              <b>{cause(f)[0]}</b> <span className="muted">({f.clip_id})</span>: {cause(f)[1]} <span className="muted">Try: {cause(f)[2]}</span>{" "}
               {f.evidence.map((c, j) => {
                 const p = citeToSeconds(c);
                 return p ? <a key={j} className="cite" onClick={() => seek(f.clip_id, p.t)}>▶ {p.label}</a> : null;
@@ -101,8 +105,8 @@ function RootCause({ findings, seek }) {
             </li>
           ))}
         </ol>
-      ) : <p className="muted">No clustered friction pattern (e.g. repeated re-grasps, repeated searches) matches a known root cause yet.</p>}
-      <p className="muted small">Deterministic pattern matching over clustered friction events, not an LLM guess -- every finding is evidence-cited.</p>
+      ) : <p className="muted">No repeated pattern points to a clear cause yet.</p>}
+      <p className="muted small">Found from repeated patterns in the video, not guessed by AI. Every finding links to the moments behind it.</p>
     </>
   );
 }
@@ -113,16 +117,16 @@ function CollaborationScore({ clips }) {
   if (!cs || !cs.total_collaboration_events) return null;
   return (
     <div className="tiles" style={{ marginBottom: 16 }}>
-      <div className="tile"><span>Help frequency</span><b>{cs.avg_help_frequency_per_hour}</b><small>events / hour, avg</small></div>
-      <div className="tile"><span>Total waiting</span><b>{cs.total_waiting_s}s</b><small>work paused for someone else</small></div>
-      <div className="tile"><span>Most waiting</span><b>{cs.clip_with_most_waiting?.slice(-6) || "–"}</b><small>{cs.note}</small></div>
+      <div className="tile"><span>How often people helped</span><b>{cs.avg_help_frequency_per_hour}</b><small>times per hour, on average</small></div>
+      <div className="tile"><span>Waiting for someone</span><b>{cs.total_waiting_s} s</b><small>work paused for another person</small></div>
+      <div className="tile"><span>Most waiting in</span><b>{cs.clip_with_most_waiting?.slice(-6) || "–"}</b><small>video</small></div>
     </div>
   );
 }
 
 const DELAY_DIMS = [
   { k: "task", label: "Task", q: "which task causes the highest delay?" },
-  { k: "friction", label: "Friction type", q: "which friction type causes the highest delay?" },
+  { k: "friction", label: "Kind of problem", q: "which friction type causes the highest delay?" },
   { k: "tool", label: "Tool", q: "which tool causes the highest delay?" },
 ];
 
@@ -135,7 +139,7 @@ function KnowledgeGraph({ clips }) {
   }, [dim, clips.join(",")]);
   return (
     <>
-      <h3 className="sec">Knowledge graph: delay by…</h3>
+      <h3 className="sec">What causes the most delay?</h3>
       <div className="panel glass pad">
         <div className="row" style={{ marginBottom: 10 }}>
           {DELAY_DIMS.map((d) => (
@@ -147,7 +151,7 @@ function KnowledgeGraph({ clips }) {
             <p>{res.answer}</p>
             {res.rows.length > 0 && (
               <table className="tbl">
-                <thead><tr><th>{DELAY_DIMS.find((d) => d.k === dim).label}</th><th>Total delay</th></tr></thead>
+                <thead><tr><th>{DELAY_DIMS.find((d) => d.k === dim).label}</th><th>Time lost</th></tr></thead>
                 <tbody>
                   {res.rows.slice(0, 8).map((row, i) => (
                     <tr key={i}><td>{row.key}</td><td>{row.total_delay_s}s</td></tr>
@@ -181,7 +185,7 @@ export default function Report({ report, clips, seek }) {
       <div className="rep-h">
         <div>
           <h2>Shift Summary</h2>
-          <p className="muted">{date} · {r.clips.length} clips · {r.observed_min} min observed · extrapolated to {r.shift_hours}h shift</p>
+          <p className="muted">{date} · {r.clips.length} videos · {Math.round(r.observed_min)} minutes watched · per-shift numbers scaled to {r.shift_hours} hours</p>
         </div>
         <a className="ghost" style={{ textDecoration: "none" }}
            href={`/api/shift-report.pdf?clips=${r.clips.join(",")}&shift_hours=${r.shift_hours}`}
@@ -190,7 +194,7 @@ export default function Report({ report, clips, seek }) {
 
       {summary && (
         <div className="ai-narrative">
-          <span className="ai-tag">AI SHIFT SUMMARY</span>
+          <span className="ai-tag">SHIFT SUMMARY</span>
           <p>{summary.narrative}</p>
           {(summary.quality_deviations_note || summary.safety_note) && (
             <p className="muted small">
@@ -201,18 +205,18 @@ export default function Report({ report, clips, seek }) {
       )}
 
       <div className="tiles">
-        <div className="tile"><span>Work steps</span><b>{r.steps}</b><small>avg {r.avg_step_s}s</small></div>
-        <div className="tile"><span>Hands-on work</span><b>{r.breakdown_pct.work ?? 0}%</b></div>
-        <div className="tile"><span>Search time</span><b>{r.breakdown_pct.search ?? 0}%</b><small>{f.search.count} events</small></div>
-        <div className="tile"><span>Idle / waiting</span><b>{r.breakdown_pct.idle ?? 0}%</b><small>{f.idle.count} events</small></div>
-        <div className="tile"><span>Recoverable value</span><b>€{(r.roi_eur_per_year_total || 0).toLocaleString()}</b><small>per station / year</small></div>
-        <div className="tile red"><span>Est. lost time</span><b>{r.lost_min_per_shift}</b><small>min / shift</small></div>
+        <div className="tile"><span>Steps of work</span><b>{r.steps}</b><small>about {Math.round(r.avg_step_s)} s each</small></div>
+        <div className="tile"><span>Hands on the work</span><b>{Math.round(r.breakdown_pct.work ?? 0)}%</b><small>of the time</small></div>
+        <div className="tile"><span>Searching</span><b>{Math.round(r.breakdown_pct.search ?? 0)}%</b><small>{f.search.count} times</small></div>
+        <div className="tile"><span>Waiting</span><b>{Math.round(r.breakdown_pct.idle ?? 0)}%</b><small>{f.idle.count} times</small></div>
+        <div className="tile"><span>Can be won back</span><b>{mins(r.recoverable_min_per_shift)}</b><small>per shift</small></div>
+        <div className="tile red"><span>Time lost</span><b>{mins(r.lost_min_per_shift)}</b><small>per shift</small></div>
       </div>
 
-      <h3 className="sec">Top recommendations</h3>
+      <h3 className="sec">Fix these first</h3>
       <ol className="replist">
         {r.recommendations.slice(0, 4).map((x, i) => (
-          <li key={i}><b>{x.title}</b>: saves ~{x.saving_min_per_shift} min/shift. <span className="muted">{x.support}.</span></li>
+          <li key={i}><b>{x.title}</b>: saves about {Math.round(x.saving_min_per_shift)} min per shift. <span className="muted">Seen {x.evidence_stats?.events} times in {x.evidence_stats?.clips} of {x.evidence_stats?.of_clips} videos.</span></li>
         ))}
       </ol>
 
@@ -220,18 +224,18 @@ export default function Report({ report, clips, seek }) {
 
       {r.longest_step && (
         <>
-          <h3 className="sec">Bottleneck</h3>
-          <p>Longest step: <b>{r.longest_step.label}</b> in {r.longest_step.clip_id} at {fmt(r.longest_step.t_start)}, {r.longest_step.duration_s.toFixed(1)}s (average {r.avg_step_s}s).</p>
+          <h3 className="sec">Slowest step</h3>
+          <p><b>{r.longest_step.label}</b> took {Math.round(r.longest_step.duration_s)} s (a step usually takes about {Math.round(r.avg_step_s)} s). <a className="cite" onClick={() => seek(r.longest_step.clip_id, r.longest_step.t_start)}>▶ {r.longest_step.clip_id.slice(-6)} {fmt(r.longest_step.t_start)}</a></p>
         </>
       )}
 
       <KnowledgeGraph clips={r.clips} />
 
-      <h3 className="sec">Collaboration events</h3>
+      <h3 className="sec">When people worked together</h3>
       <CollaborationScore clips={r.clips} />
       {r.collaboration_events?.length ? (
         <table className="tbl">
-          <thead><tr><th>Recording</th><th>When</th><th>Duration</th><th>Type</th><th>Confidence</th><th>Signals</th></tr></thead>
+          <thead><tr><th>Video</th><th>When</th><th>How long</th><th>Type</th><th>How sure</th><th>Why we think so</th></tr></thead>
           <tbody>
             {r.collaboration_events.map((e) => (
               <tr key={e.clip_id + e.t}>
@@ -245,12 +249,14 @@ export default function Report({ report, clips, seek }) {
             ))}
           </tbody>
         </table>
-      ) : <p className="muted">No high-confidence collaboration events.</p>}
-      <p className="muted small">Reported only when several signals agree (another person close and facing the wearer, work paused, voice activity or proximity). Never a transcript; precision is preferred over recall.</p>
+      ) : <p className="muted">No clear moments of working together.</p>}
+      <p className="muted small">Only shown when several signs agree: someone close and facing the worker, work paused, voices. Kairo never records what was said.</p>
 
-      <h3 className="sec">Friction detail</h3>
+      <details className="more">
+        <summary>How accurate is Kairo? (details for engineers)</summary>
+      <h3 className="sec">Lost time by kind</h3>
       <table className="tbl">
-        <thead><tr><th>Type</th><th>Events</th><th>Seconds observed</th></tr></thead>
+        <thead><tr><th>Kind</th><th>Times</th><th>Seconds in the video</th></tr></thead>
         <tbody>
           {Object.entries(f).map(([k, v]) => (
             <tr key={k}><td>{LABEL[k]}</td><td>{v.count}</td><td>{v.seconds}</td></tr>
@@ -281,7 +287,8 @@ export default function Report({ report, clips, seek }) {
           <p className="muted small">Average smoothing gain: −{avg("jitter_reduction_pct")?.toFixed(1)}% jitter. Frames without hands are mostly the worker looking away from the work, which the timeline counts as search/idle.</p>
         </>
       )}
-      <p className="muted small">Kairo evaluates the process and the workstation, not individual workers. {r.assumptions.note}</p>
+      </details>
+      <p className="muted small" style={{ marginTop: 18 }}>Kairo looks at workstations and how the job flows, never at who did it.</p>
     </div>
   );
 }

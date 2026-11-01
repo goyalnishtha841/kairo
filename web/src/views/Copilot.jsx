@@ -3,9 +3,9 @@ import { api } from "../api.js";
 
 const SUGGEST = [
   "Where was time lost?",
-  "Which recommendation has the highest ROI?",
-  "Did the workflow deviate from baseline?",
-  "When did collaboration occur?",
+  "Which fix saves the most time?",
+  "Is this video different from usual?",
+  "When did people work together?",
 ];
 const CITE = /\[([\w.-]+)@(\d{1,2}):(\d{2})\]/g;
 

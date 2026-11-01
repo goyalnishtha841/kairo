@@ -88,14 +88,14 @@ class Context:
 
     def recommendations(self):
         return [{**{k: x[k] for k in ("title", "observation", "action", "confidence", "saving_min_per_shift",
-                                      "roi_eur_per_year", "support")},
+                                      "support")},
                  "evidence": [cite(e["clip_id"], e["t"]) for e in x["evidence"][:3]]}
                 for x in self.report["recommendations"]]
 
     def summary(self):
         r = self.report
         return {k: r[k] for k in ("observed_min", "breakdown_pct", "friction", "lost_min_per_shift",
-                                  "recoverable_min_per_shift", "roi_eur_per_year_total", "headline")} | {
+                                  "recoverable_min_per_shift", "headline")} | {
             "recommendations": self.recommendations()}
 
     def proficiency(self, clip_id=None, limit=3):
@@ -191,17 +191,18 @@ def answer_rules(q, ctx):
                  for e in evs[:6]]
         return (f"{len(evs)} collaboration event(s), detected from agreeing signals (not from what was said):\n"
                 + "\n".join(lines))
-    if any(w in ql for w in ("roi", "money", "eur", "euro", "cost", "highest", "biggest", "most value")):
+    if any(w in ql for w in ("roi", "money", "eur", "euro", "cost", "highest", "biggest", "most value", "most time", "saves the most",
+                             "which fix", "best fix")):
         recs = r["recommendations"]
         if not recs:
             return "No significant friction found, so there is nothing to recommend yet."
         x = recs[0]
         ev = x["evidence"][0] if x["evidence"] else None
-        return (f"Highest ROI: **{x['title']}**, about EUR {x['roi_eur_per_year']:,} per station per year "
-                f"(~{x['saving_min_per_shift']} min per shift, confidence {round(100 * x['confidence'])}%). "
+        return (f"The fix that saves the most time: **{x['title']}**, about {x['saving_min_per_shift']} min per "
+                f"{r['shift_hours']:g}-hour shift ({round(100 * x['confidence'])}% confidence). "
                 f"{x['observation']} Evidence: {x['support']}"
                 + (f", e.g. {cite(ev['clip_id'], ev['t'])}." if ev else ".")
-                + f" Assumes EUR {r['assumptions']['labor_eur_per_hour']:g}/h; shift figures are extrapolated.")
+                + " Shift figures are scaled up from the footage watched.")
     if any(w in ql for w in ("quality", "how well", "done well", "grade")):
         rows = ctx.quality()
         mark = {"ok": "✓", "warn": "⚠", "fail": "✗"}
@@ -226,10 +227,10 @@ def answer_rules(q, ctx):
                 out.append(f"- {s['clip_id']}: {s['pattern']} (index {s['expertise_index']}, "
                            f"{s['reliability']} reliability). {s['summary']} {' '.join(s['evidence'][:2])}".rstrip())
         return "\n".join(out)
-    if any(w in ql for w in ("baseline", "deviat", "proficien", "skill", "fingerprint", "normal")):
+    if any(w in ql for w in ("baseline", "deviat", "proficien", "skill", "fingerprint", "normal", "usual", "different from")):
         rows = ctx.proficiency()
-        out = ["Workflow scores against each station's baseline (50 = the station's typical workflow; "
-               "this describes the recording, not a person):"]
+        out = ["How each video compares with how its station usually runs (50 = usual; "
+               "this is about the video, not a person):"]
         for p in rows:
             dev = p["deviations"][0] if p["deviations"] else None
             out.append(f"- {p['clip_id']}: {p['score']} ({p['level']})"
@@ -347,9 +348,9 @@ def answer_rules(q, ctx):
         b = r["breakdown_pct"]
         parts = ", ".join(f"{LABELS.get(k, k)} {v}%" for k, v in sorted(b.items(), key=lambda kv: -kv[1]))
         top = r["recommendations"][0] if r["recommendations"] else None
-        return (f"Time split over {r['observed_min']} min: {parts}. Friction costs about "
-                f"{r['lost_min_per_shift']} min per {r['shift_hours']:g}h shift (extrapolated)."
-                + (f"\nBiggest lever: {top['title']} (~{top['saving_min_per_shift']} min/shift), e.g. "
+        return (f"In {r['observed_min']:.0f} minutes of video: {parts}. That adds up to about "
+                f"{round(r['lost_min_per_shift'])} minutes lost per {r['shift_hours']:g}-hour shift (scaled up from the video)."
+                + (f"\nFix first: {top['title']} (saves about {round(top['saving_min_per_shift'])} min per shift), e.g. "
                    f"{cite(top['evidence'][0]['clip_id'], top['evidence'][0]['t'])}." if top and top["evidence"] else ""))
     return ("I answer from the event timeline. Try: \"Where was time lost?\", "
             "\"Which recommendation has the highest ROI?\", \"Did the workflow deviate from baseline?\", "
@@ -371,7 +372,7 @@ TOOLS = [
     {"name": "list_steps", "description": "Detected work steps (SOP candidates) with start/end and duration.",
      "input_schema": {"type": "object", "properties": {"clip_id": {"type": ["string", "null"]}}}},
     {"name": "get_recommendations", "description": "Ranked recommendations with observation, confidence, minutes "
-     "per shift, EUR per year (ROI) and evidence cites.", "input_schema": {"type": "object", "properties": {}}},
+     "per shift saved and evidence cites. Talk about time saved; Kairo does not put a money value on it.", "input_schema": {"type": "object", "properties": {}}},
     {"name": "get_proficiency", "description": "Workflow score (0-100, 50 = station baseline) with explained "
      "deviations and evidence cites. Omit clip_id for the recordings that deviate most. Describes workflows, "
      "never people.", "input_schema": {"type": "object", "properties": {"clip_id": {"type": ["string", "null"]}}}},
@@ -440,6 +441,7 @@ TOOLS = [
 ]
 
 SYSTEM = """You are Kairo, a process-improvement copilot for factory egocentric video.
+Speak plainly, as to a shift supervisor, and talk about time saved (minutes per shift), never money.
 You evaluate the workstation and process, never the worker as a person: say "the workflow deviates from
 the baseline", never "the worker is slow". Skill patterns describe the motion in a recording ("this
 recording shows expert-like motion"), never a person. Collaboration events come from agreeing signals; never claim

@@ -58,7 +58,7 @@ def build(clip_ids, shift_hours=8.0, out=None):
         ["Work steps", str(report["steps"])],
         ["Hands-on work", f"{report['breakdown_pct'].get('work', 0)}%"],
         ["Search time", f"{report['breakdown_pct'].get('search', 0)}%"],
-        ["Recoverable value", f"EUR {report['roi_eur_per_year_total']:,} / year"],
+        ["Time that can be won back", f"{report['recoverable_min_per_shift']} min / shift"],
         ["Est. lost time", f"{report['lost_min_per_shift']} min / shift"],
     ]
     t = Table(tiles, colWidths=[90 * mm, 70 * mm])
@@ -74,7 +74,7 @@ def build(clip_ids, shift_hours=8.0, out=None):
         story.append(Paragraph("Top recommendations", ss["Sec"]))
         items = [ListItem(Paragraph(
             f"<b>{r['title']}</b>: saves ~{r['saving_min_per_shift']} min/shift "
-            f"(EUR {r['roi_eur_per_year']:,}/yr, {round(100 * r['confidence'])}% confidence). {r['support']}.",
+            f"({round(100 * r['confidence'])}% confidence). {r['support']}.",
             ss["Body"])) for r in report["recommendations"][:4]]
         story.append(ListFlowable(items, bulletType="bullet"))
 

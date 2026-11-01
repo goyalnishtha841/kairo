@@ -27,6 +27,8 @@ export const api = {
   shiftSummary: (clips) => fetch(`/api/shift-summary?clips=${clips.join(",")}`).then(j),
   rootCause: (clips) => fetch(`/api/root-cause?clips=${clips.join(",")}`).then(j),
   safety: (clip) => fetch(`/api/safety?clip=${encodeURIComponent(clip)}`).then(j),
+  search: (query, clips) =>
+    fetch("/api/search", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query, clips }) }).then(j),
   attention: (clip) => fetch(`/api/attention?clip=${encodeURIComponent(clip)}`).then(j),
   digitalTwin: (clip, shiftStart) =>
     fetch(`/api/digital-twin?clip=${encodeURIComponent(clip)}` + (shiftStart ? `&shift_start=${shiftStart}` : "")).then(j),
@@ -56,12 +58,12 @@ export const LABEL = {
   work: "Working",
   search: "Searching",
   transit: "Walking away",
-  idle: "Idle / waiting",
-  hesitation: "Hesitation",
-  extra_reach: "Extra reach",
-  reattempt: "Repeated correction",
-  collaboration: "Collaboration",
-  possible_collaboration: "Possible collaboration",
+  idle: "Waiting",
+  hesitation: "Pausing",
+  extra_reach: "Extra reaching",
+  reattempt: "Picking up again",
+  collaboration: "Working together",
+  possible_collaboration: "Maybe working together",
 };
 
 export const COLOR = {

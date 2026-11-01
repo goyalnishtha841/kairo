@@ -83,10 +83,10 @@ function Simulation({ rec }) {
   return (
     <div className="sim">
       <div className="simrow"><span className="muted">Today</span><Bars states={sim.before} total={sim.duration_before} /><span className="t">{fmt(sim.duration_before)}</span></div>
-      <div className="simrow"><span className="acc">With fix</span><Bars states={sim.after} total={sim.duration_before} /><span className="t acc">{fmt(sim.duration_after)}</span></div>
+      <div className="simrow"><span className="acc">After fix</span><Bars states={sim.after} total={sim.duration_before} /><span className="t acc">{fmt(sim.duration_after)}</span></div>
       <p className="muted small">
-        {sim.clip_id}: removing {Math.round(sim.recoverable_share * 100)}% of each {LABEL[rec.friction_type].toLowerCase()} event
-        saves <b>{sim.saved_s}s</b> in this {fmt(sim.duration_before)} recording.
+        If {Math.round(sim.recoverable_share * 100)}% of each {LABEL[rec.friction_type].toLowerCase()} moment were removed,
+        this {fmt(sim.duration_before)} video ({sim.clip_id}) would take <b>{sim.saved_s} s less</b>.
       </p>
     </div>
   );
@@ -98,9 +98,9 @@ function Rec({ r, rank, seek }) {
   return (
     <div className={"rec glass" + (rank === 0 ? " rec-best" : "")}>
       <div className="rec-h">
-        <span className={"kind " + r.kind}>{r.kind}</span>
+        <span className={"kind " + r.kind}>{KIND[r.kind] || r.kind}</span>
         <b>{r.title}</b>
-        <span className="save">€{r.roi_eur_per_year.toLocaleString()}<small>/yr</small></span>
+        <span className="save">~{r.saving_min_per_shift} min<small> saved per shift</small></span>
       </div>
       <div className="rec-grid">
         <div>
@@ -108,23 +108,22 @@ function Rec({ r, rank, seek }) {
           <p className="act">→ {r.action}</p>
         </div>
         <div className="rec-stats">
-          <div><b>{r.saving_min_per_shift}</b><span>min / shift</span></div>
-          <div><b>{r.evidence_stats.events}</b><span>events</span></div>
-          <div><b>{r.evidence_stats.clips}/{r.evidence_stats.of_clips}</b><span>clips</span></div>
+          <div><b>{r.evidence_stats.events}</b><span>times seen</span></div>
+          <div><b>{r.evidence_stats.clips}/{r.evidence_stats.of_clips}</b><span>videos</span></div>
           <div className="conf" title={r.confidence_method}>
-            <span>Confidence {c}%</span>
+            <span>How sure: {c}%</span>
             <div className="confbar"><i style={{ width: `${c}%` }} /></div>
           </div>
         </div>
       </div>
       <div className="evid">
-        <span className="muted">Evidence:</span>
+        <span className="muted">See it:</span>
         {r.evidence.map((e) => (
           <a key={e.id + e.clip_id} className="cite" onClick={() => seek(e.clip_id, e.t)} title={e.note}>
             ▶ {e.clip_id.slice(-6)} {fmt(e.t)} ({e.dur}s)
           </a>
         ))}
-        <button className="ghost sm right" onClick={() => setOpen(!open)}>{open ? "Hide simulation" : "Simulate fix"}</button>
+        <button className="ghost sm right" onClick={() => setOpen(!open)}>{open ? "Hide preview" : "Preview the fix"}</button>
       </div>
       {open && <Simulation rec={r} />}
     </div>
@@ -141,11 +140,11 @@ function Safety({ clips, seek }) {
   const forecasts = configured.flatMap((r) => r.forecasts.map((f) => ({ ...f, clip_id: r.clip_id })));
   return (
     <div className="panel glass">
-      <div className="panel-h"><h3>Safety risk</h3><span className="muted">predicted, not just detected</span></div>
+      <div className="panel-h"><h3>Safety risk</h3><span className="muted">warns before it happens</span></div>
       {!configured.length ? (
-        <p className="muted small">No unsafe zone is configured for any station in this shift, so safety risk
-          cannot be measured yet -- that is not the same as "safe". Configure events/config.py's UNSAFE_ZONES
-          for a station to turn this on.</p>
+        <p className="muted pad">Not measured yet: no danger zones have been marked for these stations. Until they are,
+          Kairo can't tell whether hands go somewhere unsafe, so this is not the same as "safe".
+          <span className="small"> (Mark zones in <code>events/config.py</code>, UNSAFE_ZONES.)</span></p>
       ) : forecasts.length ? (
         <>
           <ul className="replist">
@@ -157,14 +156,16 @@ function Safety({ clips, seek }) {
               </li>
             ))}
           </ul>
-          <p className="muted small">Poisson-rate extrapolation from recent unsafe-reach frequency -- a heuristic, not a trained model.</p>
+          <p className="muted small">Estimated from how often unsafe reaches happened just before. A rule of thumb, not a trained model.</p>
         </>
       ) : (
-        <p className="muted small">Unsafe zones configured ({configured.map((r) => r.unsafe_zones.join("/")).join(", ")}), no repeated unsafe reaches detected.</p>
+        <p className="muted pad">Danger zones are marked ({configured.map((r) => r.unsafe_zones.join("/")).join(", ")}), and no repeated unsafe reaches were seen.</p>
       )}
     </div>
   );
 }
+
+const KIND = { flow: "Workflow", layout: "Layout", method: "Method" };
 
 export default function Impact({ report, seek }) {
   const recs = report.recommendations;
@@ -174,19 +175,18 @@ export default function Impact({ report, seek }) {
   return (
     <div className="impact">
       <div className="hero glass">
-        <div className="hero-n"><span className="eur">€<CountUp to={report.roi_eur_per_year_total} /></span><span>per station per year</span></div>
+        <div className="hero-n"><span className="eur"><CountUp to={report.recoverable_min_per_shift} decimals={0} /> min</span><span>could be won back every {report.shift_hours}-hour shift</span></div>
         <div className="hero-side">
-          <div><b><CountUp to={report.recoverable_min_per_shift} decimals={1} /></b><span>min / shift recoverable</span></div>
-          <div><b>{recs.length}</b><span>evidence-backed fixes</span></div>
-          <div><b>{report.observed_min}</b><span>min of footage analysed</span></div>
+          <div><b>{Math.round(report.lost_min_per_shift)} min</b><span>lost per shift today</span></div>
+          <div><b>{recs.length}</b><span>fixes, each with proof</span></div>
+          <div><b>{Math.round(report.observed_min)} min</b><span>of video watched</span></div>
         </div>
-        <p className="hero-p">{report.headline}</p>
       </div>
 
-      <h3 className="sec">Recommendations, ranked by ROI</h3>
+      <h3 className="sec">Fixes, biggest time saving first</h3>
       <div className="recs">
         {recs.map((r, i) => <Rec key={r.friction_type} r={r} rank={i} seek={seek} />)}
-        {!recs.length && <div className="muted">No significant friction detected.</div>}
+        {!recs.length && <div className="empty">No real time loss found, so there is nothing to fix yet.</div>}
       </div>
 
       <div className="grid2" style={{ marginTop: 16 }}>
@@ -212,11 +212,12 @@ export default function Impact({ report, seek }) {
       <div style={{ marginTop: 16 }}>
         <Safety clips={report.clips} seek={seek} />
       </div>
-      <p className="muted small">
-        ROI = minutes per shift × €{a.labor_eur_per_hour}/h × {a.shifts_per_day} shifts × {a.workdays_per_year} days.
-        A fix removes {Object.entries(a.recoverable_fraction).map(([k, v]) => `${Math.round(v * 100)}% of ${LABEL[k].toLowerCase()}`).join(", ")}.
-        Confidence = 0.5 × evidence volume + 0.3 × spread across clips + 0.2 × consistency. {a.note}
-      </p>
+      <details className="more">
+        <summary>How we estimate this</summary>
+        <p>Minutes per shift are scaled up from the {report.observed_min} minutes of video watched to an {report.shift_hours}-hour shift.
+          A fix is assumed to remove {Object.entries(a.recoverable_fraction).map(([k, v]) => `${Math.round(v * 100)}% of ${LABEL[k].toLowerCase()}`).join(", ")},
+          not all of it. "How sure" grows with how often a problem was seen, in how many videos, and how consistent it was.</p>
+      </details>
     </div>
   );
 }
