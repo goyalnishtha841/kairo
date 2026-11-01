@@ -10,6 +10,7 @@ import shutil
 import sys
 import threading
 import time
+import uuid
 from functools import lru_cache
 from pathlib import Path
 
@@ -32,6 +33,7 @@ import collab_score  # noqa: E402
 import compare  # noqa: E402
 import copilot  # noqa: E402
 import digital_twin  # noqa: E402
+import highlight_reel  # noqa: E402
 import insights  # noqa: E402
 import knowledge_graph  # noqa: E402
 import memory  # noqa: E402
@@ -270,6 +272,67 @@ def get_shift_report_pdf(clips: str = "", shift_hours: float = 8.0):
     pdf = pdf_report.build(ids, shift_hours)
     return Response(content=pdf, media_type="application/pdf",
                     headers={"Content-Disposition": "attachment; filename=kairo-shift-report.pdf"})
+
+
+# --------------------------------------------------------------------------- highlight reel
+# ffmpeg trim/caption/concat takes real seconds per moment, so this runs as a background job
+# (its own queue: independent of the clip-processing JOBS below, since a reel spans many clips).
+REEL_JOBS: dict[str, dict] = {}
+_reel_queue: "queue.Queue[str]" = queue.Queue()
+
+
+def _reel_worker():
+    while True:
+        job_id = _reel_queue.get()
+        job = REEL_JOBS[job_id]
+        job.update(state="running", started=time.time())
+        try:
+            out = OUT / "reels" / f"{job_id}.mp4"
+            r = highlight_reel.build(job["clips"], out, job["mode"], job["max_clips"])
+            job.update(state="done" if r["out"] else "empty", result=r, finished=time.time())
+        except Exception as e:
+            job.update(state="failed", error=f"{type(e).__name__}: {e}", finished=time.time())
+        _reel_queue.task_done()
+
+
+threading.Thread(target=_reel_worker, daemon=True).start()
+
+
+class ReelRequest(BaseModel):
+    clips: list[str]
+    mode: str = "friction"
+    max_clips: int = 6
+
+
+@app.post("/api/highlight-reel")
+def start_highlight_reel(body: ReelRequest):
+    ids = parse_clips(",".join(body.clips))
+    if body.mode not in ("friction", "clean"):
+        raise HTTPException(400, "mode must be 'friction' or 'clean'")
+    job_id = uuid.uuid4().hex[:12]
+    REEL_JOBS[job_id] = {"job_id": job_id, "state": "queued", "clips": ids, "mode": body.mode,
+                        "max_clips": max(1, min(body.max_clips, 12)), "queued": time.time()}
+    _reel_queue.put(job_id)
+    return REEL_JOBS[job_id]
+
+
+@app.get("/api/highlight-reel/{job_id}")
+def get_highlight_reel_status(job_id: str):
+    job = REEL_JOBS.get(job_id)
+    if not job:
+        raise HTTPException(404, "no such reel job")
+    return job
+
+
+@app.get("/api/highlight-reel/{job_id}/video")
+def get_highlight_reel_video(job_id: str):
+    job = REEL_JOBS.get(job_id)
+    if not job or job.get("state") != "done":
+        raise HTTPException(404, "reel not ready")
+    p = Path(job["result"]["out"])
+    if not p.exists():
+        raise HTTPException(404, "reel file missing")
+    return FileResponse(p, media_type="video/mp4", filename="kairo-highlight-reel.mp4")
 
 
 # --------------------------------------------------------------------------- processing jobs

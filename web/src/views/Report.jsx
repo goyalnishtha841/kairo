@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { api, fmt, LABEL } from "../api.js";
 import { CAUSE, mins } from "./Overview.jsx";
 
@@ -166,6 +166,71 @@ function KnowledgeGraph({ clips }) {
   );
 }
 
+const REEL_MODES = [
+  { k: "friction", label: "Worst moments", desc: "A toolbox-talk reel of the clearest friction, worst first." },
+  { k: "clean", label: "Best practice", desc: "The longest friction-free stretches -- how it should look." },
+];
+
+function HighlightReel({ clips }) {
+  const [mode, setMode] = useState("friction");
+  const [job, setJob] = useState(null);
+  const pollRef = useRef(null);
+  useEffect(() => () => clearInterval(pollRef.current), []);
+
+  const start = () => {
+    setJob(null);
+    api.startHighlightReel(clips, mode, 6).then((j0) => {
+      setJob(j0);
+      pollRef.current = setInterval(() => {
+        api.highlightReelStatus(j0.job_id).then((j1) => {
+          setJob(j1);
+          if (j1.state !== "queued" && j1.state !== "running") clearInterval(pollRef.current);
+        }).catch(() => clearInterval(pollRef.current));
+      }, 1000);
+    });
+  };
+
+  const busy = job && (job.state === "queued" || job.state === "running");
+  return (
+    <>
+      <h3 className="sec">Make a training video</h3>
+      <div className="panel glass pad">
+        <p className="muted small">
+          Auto-cuts a short, captioned video from the moments above -- no editing. Each clip is trimmed
+          from the real footage with the exact finding as its caption.
+        </p>
+        <div className="row" style={{ marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
+          {REEL_MODES.map((m) => (
+            <button key={m.k} className={"ghost sm" + (mode === m.k ? " on" : "")} onClick={() => setMode(m.k)}
+                    title={m.desc}>{m.label}</button>
+          ))}
+          <button className="ghost" disabled={busy} onClick={start} style={{ marginLeft: "auto" }}>
+            {busy ? "Generating…" : "Generate"}
+          </button>
+        </div>
+        {job && (job.state === "done" ? (
+          <>
+            <video src={api.highlightReelVideo(job.job_id)} controls style={{ width: "100%", borderRadius: 10, marginTop: 6 }} />
+            <p className="muted small" style={{ marginTop: 8 }}>
+              {job.result.moments.length} moment{job.result.moments.length === 1 ? "" : "s"}, {job.result.duration_s}s total.{" "}
+              <a className="ghost sm" style={{ textDecoration: "none" }} href={api.highlightReelVideo(job.job_id)} download="kairo-highlight-reel.mp4">Download</a>
+            </p>
+            {job.result.skipped.length > 0 && (
+              <p className="muted small">{job.result.skipped.length} moment(s) skipped (no source video for that clip).</p>
+            )}
+          </>
+        ) : job.state === "empty" ? (
+          <p className="muted small">{job.result?.note || "No moments found for this mode."}</p>
+        ) : job.state === "failed" ? (
+          <p className="warn small">Failed: {job.error}</p>
+        ) : (
+          <p className="muted small">{job.state === "queued" ? "Queued…" : "Trimming, captioning and stitching the clips…"}</p>
+        ))}
+      </div>
+    </>
+  );
+}
+
 export default function Report({ report, clips, seek }) {
   const r = report;
   const f = r.friction;
@@ -228,6 +293,8 @@ export default function Report({ report, clips, seek }) {
           <p><b>{r.longest_step.label}</b> took {Math.round(r.longest_step.duration_s)} s (a step usually takes about {Math.round(r.avg_step_s)} s). <a className="cite" onClick={() => seek(r.longest_step.clip_id, r.longest_step.t_start)}>▶ {r.longest_step.clip_id.slice(-6)} {fmt(r.longest_step.t_start)}</a></p>
         </>
       )}
+
+      <HighlightReel clips={r.clips} />
 
       <KnowledgeGraph clips={r.clips} />
 

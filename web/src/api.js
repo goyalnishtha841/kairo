@@ -43,6 +43,14 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ clip_id: clipId, expected_steps: expectedSteps, mandatory }),
     }).then(j),
+  startHighlightReel: (clips, mode, maxClips) =>
+    fetch("/api/highlight-reel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clips, mode, max_clips: maxClips }),
+    }).then(j),
+  highlightReelStatus: (jobId) => fetch(`/api/highlight-reel/${jobId}`).then(j),
+  highlightReelVideo: (jobId) => `/api/highlight-reel/${jobId}/video`,
   upload: (file) => {
     const fd = new FormData();
     fd.append("file", file);
