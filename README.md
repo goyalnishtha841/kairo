@@ -17,11 +17,25 @@ with a minutes-per-shift number attached. Every claim links to the second of vid
 [![License](https://img.shields.io/badge/license-MIT-ffb547.svg)](LICENSE)
 [![Track](https://img.shields.io/badge/track-Open%20Innovation-ff8a5b.svg)](#problem-statement)
 
-**[3-minute demo script](docs/DEMO.md) · [Full technical write-up](docs/OVERVIEW.md)**
+### 🔗 Live: **[kairo-61lz.onrender.com](https://kairo-61lz.onrender.com)**
 
-<sub>Not yet deployed to a public URL — see [Deployment](#deployment) to put it on Render in a few minutes, then drop the link here.</sub>
+<sub>Free hosting sleeps when idle, so the first visit can take about a minute to wake up. The dashboard is at <a href="https://kairo-61lz.onrender.com/#/app">/#/app</a>.</sub>
+
+**[Live demo](https://kairo-61lz.onrender.com) · [3-minute demo script](docs/DEMO.md) · [Full technical write-up](docs/OVERVIEW.md) · [Team](#team)**
+
+Built for the **BIOS Hackathon 2026** by team **DefectIQ**.
 
 </div>
+
+---
+
+## Screenshots
+
+| Landing page | Overview |
+|---|---|
+| ![Landing page](docs/screenshots/landing.webp) | ![Overview: time lost, time to win back, fixes and root causes](docs/screenshots/overview.webp) |
+| **Watch a video** | **Fixes & safety** |
+| ![Watch: video with hand tracking, every moment labelled](docs/screenshots/watch.webp) | ![Fixes ranked by time saved, with proof and a preview](docs/screenshots/fixes.webp) |
 
 ---
 
@@ -40,6 +54,9 @@ with a minutes-per-shift number attached. Every claim links to the second of vid
 - [Project layout](#project-layout)
 - [Testing](#testing)
 - [Honest limits and roadmap](#honest-limits-and-roadmap)
+- [Future work](#future-work)
+- [Team](#team)
+- [License](#license)
 
 ---
 
@@ -395,10 +412,35 @@ python -m pytest tests -q
   way hand-tracking was.
 - Everything runs on a laptop CPU today — no GPU was used anywhere in building or running this.
 
+## Future work
+
+- **Live camera streams:** analyse a shift as it happens, not only after upload, and alert a supervisor while the problem is still on the floor.
+- **Measured tool detection:** label tool footage and measure the SAM 2 / YOLO-World tool path the same way hand tracking is measured, then turn it on by default.
+- **Persistent storage for uploads:** keep every uploaded video and its results across restarts (a cloud disk or object storage), with per-factory accounts.
+- **Before-and-after proof:** record a station again after a fix and show the minutes actually won back, not just the estimate.
+- **Multi-station view:** follow one product through several stations to find the true bottleneck of a line.
+- **SOP from the best run:** turn the cleanest recording into a printable, picture-by-picture work instruction automatically.
+- **More languages for the copilot and reports**, for shop floors where English isn't the first language.
+- **Edge box deployment:** a small on-site box so video never leaves the factory at all.
+
 ## Data rules
 
-- **Never commit footage, frames, or screenshots.** `data/`, `outputs/` and all media are git-ignored.
-- Show results only on the common demo clips. Delete cloud uploads after the event.
+- Raw footage and `outputs/` stay git-ignored. The processed sample recordings used by the live site are published as a [GitHub Release](https://github.com/goyalnishtha841/kairo/releases) file (with the organisers' permission) and baked into the deploy image by the `Dockerfile`.
+- The screenshots above come from those same published sample recordings.
+
+## Team
+
+Built for the **BIOS Hackathon 2026** by **DefectIQ**.
+
+| Member | Area |
+|---|---|
+| **Nishtha Goyal** (team lead) | Advanced analysis and AI features: SOP compliance, attention map, safety risk and live safety alerts, baseline drift, root cause, knowledge graph, shift memory, shift summary and natural-language search; voice input and spoken answers for the copilot; training highlight reels; 3D hand view; tool detection and SAM 2 masks; repeated pick-up detection; PDF report; Docker and Render deployment; README |
+| **Noor Tandon** | Core pipeline: hand tracking and temporal verification, the event timeline, SOP comparator, recommendations with time savings, workflow proficiency, collaboration detection, skill profiling and quality score; the Groq / Claude / rules copilot; accuracy evaluation and tests; landing page with live hand tracking, dashboard design, dark mode; sample data for the live site |
+| **Samyak Rawat** | Research and validation: hand-labelling frames for the accuracy evaluation, testing on the sample recordings, demo script, presentation and demo video |
+
+## License
+
+[MIT](LICENSE) © 2026 Team DefectIQ (Nishtha Goyal, Noor Tandon, Samyak Rawat).
 
 ---
 
