@@ -56,10 +56,6 @@ with a minutes-per-shift number attached. Every claim links to the second of vid
 
 ## Take a look
 
-**Landing page, scrolled top to bottom** ([watch as MP4](docs/media/landing-scroll.mp4))
-
-![Scrolling through the Kairo landing page](docs/media/landing-scroll.webp)
-
 | Landing page | Overview |
 |---|---|
 | ![Landing page](docs/screenshots/landing.webp) | ![Overview: time lost, time to win back, fixes and root causes](docs/screenshots/overview.webp) |
