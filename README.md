@@ -31,6 +31,10 @@ Built for the **BIOS Hackathon 2026** by team **DefectIQ**.
 
 ## Screenshots
 
+**Landing page, scrolled top to bottom** ([watch as MP4](docs/media/landing-scroll.mp4))
+
+![Scrolling through the Kairo landing page](docs/media/landing-scroll.webp)
+
 | Landing page | Overview |
 |---|---|
 | ![Landing page](docs/screenshots/landing.webp) | ![Overview: time lost, time to win back, fixes and root causes](docs/screenshots/overview.webp) |
@@ -437,10 +441,11 @@ Built for the **BIOS Hackathon 2026** by **DefectIQ**.
 | **Nishtha Goyal** (team lead) | Advanced analysis and AI features: SOP compliance, attention map, safety risk and live safety alerts, baseline drift, root cause, knowledge graph, shift memory, shift summary and natural-language search; voice input and spoken answers for the copilot; training highlight reels; 3D hand view; tool detection and SAM 2 masks; repeated pick-up detection; PDF report; Docker and Render deployment; README |
 | **Noor Tandon** | Core pipeline: hand tracking and temporal verification, the event timeline, SOP comparator, recommendations with time savings, workflow proficiency, collaboration detection, skill profiling and quality score; the Groq / Claude / rules copilot; accuracy evaluation and tests; landing page with live hand tracking, dashboard design, dark mode; sample data for the live site |
 | **Samyak Rawat** | Research and validation: hand-labelling frames for the accuracy evaluation, testing on the sample recordings, demo script, presentation and demo video |
+| **Saksham** | Deployment and live-site quality: Render hosting checks, publishing the sample-data release, testing every page on desktop and mobile, first-load performance, screenshots and the landing-page walkthrough video |
 
 ## License
 
-[MIT](LICENSE) © 2026 Team DefectIQ (Nishtha Goyal, Noor Tandon, Samyak Rawat).
+[MIT](LICENSE) © 2026 Team DefectIQ (Nishtha Goyal, Noor Tandon, Samyak Rawat, Saksham).
 
 ---
 
