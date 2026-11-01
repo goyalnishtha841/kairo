@@ -96,6 +96,78 @@ function useSafetyAlert(clip, now) {
   return active;
 }
 
+// A rotatable 3D skeleton (nods to the harder "3D hand motion" track) from MediaPipe's hand-landmark
+// z -- relative depth from the wrist, not a true metric world landmark or a mesh (HaMeR/WiLoR). Plain
+// canvas + a hand-rolled weak-perspective projection, matching the rest of this codebase's "no chart
+// library, no WebGL framework" style rather than pulling in Three.js for one small panel.
+function Hand3D({ clip, videoRef }) {
+  const canvasRef = useRef(null);
+  const [track, setTrack] = useState(null);
+  const angleRef = useRef(0.5);
+  const draggingRef = useRef(false);
+
+  useEffect(() => { setTrack(null); api.hands(clip).then(setTrack).catch(() => {}); }, [clip]);
+
+  useEffect(() => {
+    let raf;
+    const draw = () => {
+      const c = canvasRef.current, v = videoRef.current;
+      if (c) {
+        const ctx = c.getContext("2d");
+        const W = (c.width = c.clientWidth), H = (c.height = c.clientHeight);
+        ctx.clearRect(0, 0, W, H);
+        const f = track && v && findFrame(track.frames, v.currentTime);
+        if (!draggingRef.current) angleRef.current += 0.006;
+        if (f) {
+          const ca = Math.cos(angleRef.current), sa = Math.sin(angleRef.current);
+          for (const [id, lm] of f[1]) {
+            const wrist = lm[0];
+            const proj = lm.map(([x, y, z]) => {
+              const dx = x - wrist[0], dy = y - wrist[1], dz = (z ?? 0) - (wrist[2] ?? 0);
+              const rx = dx * ca - dz * sa, rz = dx * sa + dz * ca;
+              const persp = 1 / (1 + rz * 2.2);
+              const scale = Math.min(W, H) * 2.1;
+              return [W / 2 + rx * scale * persp, H / 2 + dy * scale * persp, rz];
+            });
+            ctx.strokeStyle = HAND_COLOR[id]; ctx.lineWidth = 2;
+            for (const [a, b] of BONES) {
+              ctx.beginPath(); ctx.moveTo(proj[a][0], proj[a][1]); ctx.lineTo(proj[b][0], proj[b][1]); ctx.stroke();
+            }
+            for (const [px, py, pz] of proj) {
+              ctx.fillStyle = pz < 0 ? "#fff" : "#caa98a";
+              ctx.beginPath(); ctx.arc(px, py, 3 + Math.max(0, -pz * 6), 0, 7); ctx.fill();
+            }
+          }
+        } else {
+          ctx.fillStyle = "var(--fg2)"; ctx.font = "13px Inter"; ctx.fillText("No hand in this frame", 14, 20);
+        }
+      }
+      raf = requestAnimationFrame(draw);
+    };
+    raf = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(raf);
+  }, [track, videoRef]);
+
+  return (
+    <div className="panel hand3d">
+      <div className="panel-h"><h3>3D hand view</h3><span className="muted">drag to rotate</span></div>
+      <canvas ref={canvasRef}
+              onMouseDown={() => (draggingRef.current = true)}
+              onMouseUp={() => (draggingRef.current = false)}
+              onMouseLeave={() => (draggingRef.current = false)}
+              onMouseMove={(e) => { if (draggingRef.current) angleRef.current += e.movementX * 0.012; }} />
+      <p className="muted small">Relative depth from MediaPipe's hand landmarks, not a true 3D mesh.</p>
+    </div>
+  );
+}
+
+function findFrame(frames, t) {
+  let lo = 0, hi = frames.length - 1;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (frames[m][0] < t) lo = m + 1; else hi = m; }
+  const f = frames[lo];
+  return f && Math.abs(f[0] - t) < 0.3 ? f : null;
+}
+
 function FrictionTimeline({ timeline, now, onSeek }) {
   const D = timeline.duration_s || 1;
   const friction = timeline.events.filter((e) => e.severity !== "green");
@@ -261,6 +333,7 @@ export default function Analyze({ clip, timeline, videoRef, onVideoReady, seek, 
             {!shown.length && <div className="muted pad">Nothing here.</div>}
           </div>
         </div>
+        <Hand3D clip={clip} videoRef={videoRef} />
         <Attention clip={clip} />
         <DigitalTwin clip={clip} seek={seek} />
         <Copilot clips={clips} seek={seek} />

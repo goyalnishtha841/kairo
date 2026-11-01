@@ -246,6 +246,9 @@ h3 { font-size: 19px; line-height: 1.25; }
 .stack { display: flex; height: 28px; margin: 16px 18px 0; border-radius: 8px; overflow: hidden; }
 .attention .legend, .attention > p { margin-left: 18px; margin-right: 18px; }
 .attention > p { padding-bottom: 12px; }
+.hand3d canvas { width: 100%; height: 220px; display: block; cursor: grab; background: #070503; }
+.hand3d canvas:active { cursor: grabbing; }
+.hand3d > p { margin: 8px 18px 14px; }
 .twin-list { list-style: none; margin: 0; padding: 8px 18px 16px; display: flex; flex-direction: column; gap: 9px; }
 .twin-list li { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: 13.5px; }
 .twin-list b { flex-shrink: 0; }

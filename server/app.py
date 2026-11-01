@@ -95,8 +95,11 @@ def get_timeline(clip_id: str):
 @lru_cache(maxsize=16)
 def _compact_hands(path, mtime):
     h = json.loads(Path(path).read_text())
-    # [t, [[id, [[x,y]x21]], ...]] - small enough to stream to the browser for the live overlay
-    return {"fps": h["fps"], "frames": [[f["t"], [[hd["id"], [[round(p[0], 3), round(p[1], 3)] for p in hd["lm"]]]
+    # [t, [[id, [[x,y,z]x21]], ...]] - small enough to stream to the browser for the live overlay.
+    # z is MediaPipe's image-landmark relative depth (wrist-relative, not a true metric world
+    # landmark/mesh) -- kept at the same rounding as x/y, used by the 3D hand view.
+    return {"fps": h["fps"], "frames": [[f["t"], [[hd["id"], [[round(p[0], 3), round(p[1], 3), round(p[2], 3)]
+                                                              for p in hd["lm"]]]
                                                  for hd in f["hands"]]] for f in h["frames"]]}
 
 
