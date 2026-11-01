@@ -17,8 +17,6 @@ with a minutes-per-shift number attached. Every claim links to the second of vid
 
 ### [▶ Try it live: kairo-61lz.onrender.com](https://kairo-61lz.onrender.com)
 
-<sub>Free hosting sleeps when idle, so the first visit can take about a minute to wake up. The dashboard is at <a href="https://kairo-61lz.onrender.com/#/app">/#/app</a>.</sub>
-
 <br />
 
 <a href="https://kairo-61lz.onrender.com"><img src="docs/screenshots/overview-dark.webp" width="900" alt="The Kairo dashboard overview: 2h 17min lost per shift, 49 minutes you can win back, ranked fixes with proof" /></a>
@@ -63,8 +61,6 @@ with a minutes-per-shift number attached. Every claim links to the second of vid
 **Fixes & safety**
 
 ![Fixes ranked by time saved, with proof and a preview](docs/screenshots/fixes-dark.webp)
-
-<sub>Landing page walkthrough: [watch as MP4](docs/media/landing-scroll.mp4)</sub>
 
 ---
 
