@@ -19,7 +19,7 @@ with a minutes-per-shift number attached. Every claim links to the second of vid
 
 <br />
 
-<a href="https://kairo-61lz.onrender.com"><img src="docs/screenshots/landing-sharp.webp" width="900" alt="The Kairo landing page: 'You run the factory. Not the stopwatch.'" /></a>
+<a href="https://kairo-61lz.onrender.com"><img src="docs/screenshots/how-it-helps.webp" width="900" alt="The Kairo landing page: Here's how Kairo helps, every shift" /></a>
 
 <sub>Built for the **BIOS Hackathon 2026** by team **DefectIQ**.</sub>
 
