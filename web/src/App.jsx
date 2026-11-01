@@ -45,11 +45,15 @@ function Logo({ size = 18 }) {
 
 function ThemeSwitch({ theme, setTheme }) {
   const dark = theme === "dark";
+  const label = dark ? "Switch to light mode" : "Switch to dark mode";
   return (
-    <button className="theme-switch" role="switch" aria-checked={dark} onClick={() => setTheme(dark ? "light" : "dark")}
-            title={dark ? "Switch to light mode" : "Switch to dark mode"}>
-      <span className="track"><span className="knob" aria-hidden="true">{dark ? "☾" : "☀"}</span></span>
-      <span className="sr">{dark ? "Dark" : "Light"}</span>
+    <button className="theme-btn" onClick={() => setTheme(dark ? "light" : "dark")} title={label} aria-label={label}>
+      {dark ? (
+        <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+      ) : (
+        <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path d="M20 14.6A8.5 8.5 0 0 1 9.4 4a8.5 8.5 0 1 0 10.6 10.6Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /></svg>
+      )}
     </button>
   );
 }
@@ -135,18 +139,13 @@ export default function App() {
     <div className="app">
       <Boot done={!!ready} />
       <header className="top">
-        <div className="brand">
-          <a href="#/" title="Back to the Kairo home page"><span className="logo"><Logo /></span> Kairo</a>
-        </div>
+        <a className="brand" href="#/" title="Back to the Kairo home page"><Logo size={20} /> Kairo</a>
         <nav className="tabs" aria-label="Dashboard">
           {NAV.map(([label, views]) => {
             const on = views.includes(tab);
             return <button key={label} className={on ? "on" : ""} onClick={() => setTab(on ? tab : views[0])} aria-current={on ? "page" : undefined}>{label}</button>;
           })}
         </nav>
-        <div className={"engine " + (engine?.engine || "")} title="Which AI answers your questions">
-          <span className="pulse" /> {{ groq: "AI assistant on", claude: "AI assistant on", rules: "Offline answers" }[engine?.engine] || "…"}
-        </div>
         <ThemeSwitch theme={theme} setTheme={setTheme} />
       </header>
 

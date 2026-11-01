@@ -323,11 +323,15 @@ function Faq() {
       <Words text="FAQ" className="lp-h2 lp-center lp-h2-sm" />
       <div className="lp-faq-list">
         {FAQ.map(([q, a], i) => (
-          <div key={q} className={"lp-q" + (open === i ? " on" : "")} data-reveal>
-            <button onClick={() => setOpen(open === i ? -1 : i)} aria-expanded={open === i}>
-              {q}<span className="lp-plus" aria-hidden="true" />
-            </button>
-            <div className="lp-a"><div><p>{a}</p></div></div>
+          // the fade-in lives on a wrapper React never re-renders: the observer adds "in" to it, and
+          // toggling "on" below would otherwise wipe that class and hide the item again
+          <div key={q} data-reveal>
+            <div className={"lp-q" + (open === i ? " on" : "")}>
+              <button onClick={() => setOpen(open === i ? -1 : i)} aria-expanded={open === i}>
+                {q}<span className="lp-plus" aria-hidden="true" />
+              </button>
+              <div className="lp-a"><div><p>{a}</p></div></div>
+            </div>
           </div>
         ))}
       </div>
