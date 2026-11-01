@@ -97,7 +97,8 @@ function Hero() {
     <section className="lp-hero" ref={ref} id="top">
       <div className="lp-hero-sticky">
         <div className="lp-hero-media">
-          <video src={HERO_VIDEO} poster="/videos/hero-dark.jpg" autoPlay muted loop playsInline />
+          <video src={HERO_VIDEO} poster="/videos/hero-dark.jpg" autoPlay muted loop playsInline
+                 onError={(e) => { e.currentTarget.style.display = "none"; }} />
           <div className="lp-hero-shade" />
           <div className="lp-hero-copy">
             <Words as="h1" text={"You run the factory.\nNot the stopwatch."} delay={0.15} />
@@ -338,7 +339,8 @@ function Cta() {
   return (
     <section className="lp-cta-sec">
       <div className="lp-cta-card" data-reveal>
-        <video src="/videos/cta-night.mp4" poster="/videos/cta-night.jpg" autoPlay muted loop playsInline />
+        <video src="/videos/cta-night.mp4" poster="/videos/cta-night.jpg" autoPlay muted loop playsInline
+               onError={(e) => { e.currentTarget.style.display = "none"; }} />
         <div className="lp-cta-shade" />
         <div className="lp-cta-copy">
           <Words text={"A clear view of\nevery workstation"} className="lp-h2 lp-center lp-h2-lg" />

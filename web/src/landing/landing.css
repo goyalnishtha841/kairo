@@ -64,6 +64,9 @@ html.lenis, html.lenis body { height: auto; }
 .lp-hero { --p: 0; height: 175vh; position: relative; }
 .lp-hero-sticky { position: sticky; top: 0; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .lp-hero-media { position: relative; width: 100%; height: 100%; overflow: hidden;
+  /* fallback background if the hero video asset is missing (it's gitignored, see Landing.jsx) --
+     the video sits on top and hides this once it loads */
+  background: radial-gradient(120% 90% at 50% 20%, #241a0d 0%, #120d08 55%, #07050300 100%), #070503;
   transform: scale(calc(1 - .1 * var(--p)));
   border-radius: calc(32px * var(--p)); will-change: transform; }
 .lp-hero-media video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
@@ -230,7 +233,9 @@ html.lenis, html.lenis body { height: auto; }
 /* call to action */
 .lp-cta-sec { padding: 40px 24px 120px; background: var(--cream); }
 .lp-cta-card { position: relative; max-width: 1240px; margin: 0 auto; min-height: 620px; border-radius: 36px; overflow: hidden;
-  display: flex; align-items: center; justify-content: center; text-align: center; }
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  /* fallback background if the CTA video asset is missing (it's gitignored, see Landing.jsx) */
+  background: radial-gradient(120% 90% at 50% 30%, #0e1b2e 0%, #070f1a 60%, #04080f 100%); }
 .lp-cta-card > video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scale(1.08);
   transition: transform 2.4s var(--ease); }
 .lp-cta-card.in > video { transform: scale(1); }
