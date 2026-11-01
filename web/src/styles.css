@@ -208,6 +208,10 @@ h3 { font-size: 19px; line-height: 1.25; }
 .ask button, .ghost, .ask-btn { border: 0; border-radius: 12px; padding: 9px 16px; font-weight: 500; transition: transform .3s var(--ease), background .2s; }
 .ask button, .ask-btn { background: var(--accent); color: #fff; box-shadow: 0 0 0 3px rgba(242, 107, 29, .14); }
 .ask button:hover, .ask-btn:hover { background: var(--accent-ink); transform: translateY(-1px); }
+.ask button.mic { background: var(--panel2); color: var(--fg); box-shadow: none; padding: 9px 12px; font-size: 16px; }
+.ask button.mic.on { background: var(--red); color: #fff; animation: mic-pulse 1s ease-in-out infinite; }
+@keyframes mic-pulse { from { box-shadow: 0 0 0 0 rgba(229,83,75,.5); } to { box-shadow: 0 0 0 8px rgba(229,83,75,0); } }
+.toggle.small { font-size: 12px; gap: 4px; }
 .ghost { background: var(--panel); color: var(--fg); border: 1px solid var(--line); }
 .ghost:hover { border-color: var(--line2); }
 .ghost.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
