@@ -19,7 +19,7 @@ with a minutes-per-shift number attached. Every claim links to the second of vid
 
 <br />
 
-<a href="https://kairo-61lz.onrender.com"><img src="docs/screenshots/overview-dark.webp" width="900" alt="The Kairo dashboard overview: 2h 17min lost per shift, 49 minutes you can win back, ranked fixes with proof" /></a>
+<a href="https://kairo-61lz.onrender.com"><img src="docs/screenshots/landing-sharp.webp" width="900" alt="The Kairo landing page: 'You run the factory. Not the stopwatch.'" /></a>
 
 <sub>Built for the **BIOS Hackathon 2026** by team **DefectIQ**.</sub>
 
@@ -54,13 +54,11 @@ with a minutes-per-shift number attached. Every claim links to the second of vid
 
 ## Take a look
 
-| Overview | Watch a video |
+| Landing page | Overview |
 |---|---|
-| ![Overview: time lost, time to win back, fixes and root causes](docs/screenshots/overview-dark.webp) | ![Watch: video with hand tracking, every moment labelled](docs/screenshots/watch-dark.webp) |
-
-**Fixes & safety**
-
-![Fixes ranked by time saved, with proof and a preview](docs/screenshots/fixes-dark.webp)
+| ![Landing page: 'You run the factory. Not the stopwatch.'](docs/screenshots/landing-sharp.webp) | ![Overview: time lost, time to win back, fixes and root causes](docs/screenshots/overview-dark.webp) |
+| **Watch a video** | **Fixes & safety** |
+| ![Watch: video with hand tracking, every moment labelled](docs/screenshots/watch-dark.webp) | ![Fixes ranked by time saved, with proof and a preview](docs/screenshots/fixes-dark.webp) |
 
 ---
 
