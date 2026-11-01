@@ -54,13 +54,11 @@ with a minutes-per-shift number attached. Every claim links to the second of vid
 
 ## Take a look
 
-| Landing page | How Kairo helps, every shift |
+| Landing page | Overview |
 |---|---|
-| ![Landing page: 'You run the factory. Not the stopwatch.'](docs/screenshots/landing-sharp.webp) | ![Five steps: sees the hands, times every second, learns the steps, grades the work, ranks the fixes](docs/screenshots/how-it-helps.webp) |
-| **Overview** | **Watch a video** |
-| ![Overview: time lost, time to win back, fixes and root causes](docs/screenshots/overview-dark.webp) | ![Watch: video with hand tracking, every moment labelled](docs/screenshots/watch-dark.webp) |
-| **Fixes & safety** | **Live hand-tracking demo** |
-| ![Fixes ranked by time saved, with proof and a preview](docs/screenshots/fixes-dark.webp) | ![See what Kairo sees: try it with your own hands, right on the landing page](docs/screenshots/live-hands.webp) |
+| ![Landing page: Here's how Kairo helps, every shift](docs/screenshots/how-it-helps.webp) | ![Overview: time lost, time to win back, fixes and root causes](docs/screenshots/overview-dark.webp) |
+| **Watch a video** | **Live hand-tracking demo** |
+| ![Watch: video with hand tracking, every moment labelled](docs/screenshots/watch-dark.webp) | ![See what Kairo sees: try it with your own hands, right on the landing page](docs/screenshots/live-hands.webp) |
 
 ---
 
