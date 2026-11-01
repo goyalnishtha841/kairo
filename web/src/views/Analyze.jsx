@@ -4,7 +4,7 @@ import Copilot from "./Copilot.jsx";
 
 const BONES = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],
   [9,13],[13,14],[14,15],[15,16],[13,17],[0,17],[17,18],[18,19],[19,20]];
-const HAND_COLOR = { L: "#ff8a3d", R: "#ffd2b0" };
+const HAND_COLOR = { L: "#2dd4bf", R: "#99f6e4" };
 
 function useHandOverlay(clip, videoRef, canvasRef, enabled) {
   const [track, setTrack] = useState(null);
@@ -134,7 +134,7 @@ function Hand3D({ clip, videoRef }) {
               ctx.beginPath(); ctx.moveTo(proj[a][0], proj[a][1]); ctx.lineTo(proj[b][0], proj[b][1]); ctx.stroke();
             }
             for (const [px, py, pz] of proj) {
-              ctx.fillStyle = pz < 0 ? "#fff" : "#caa98a";
+              ctx.fillStyle = pz < 0 ? "#fff" : "#9aa1a8";
               ctx.beginPath(); ctx.arc(px, py, 3 + Math.max(0, -pz * 6), 0, 7); ctx.fill();
             }
           }
@@ -284,37 +284,36 @@ export default function Analyze({ clip, timeline, videoRef, onVideoReady, seek, 
   const safetyAlert = useSafetyAlert(clip, now);
 
   return (
-    <div className="analyze">
-      <section className="left">
-        <div className={"player" + (safetyAlert ? " safety-alert" : "")}>
-          <video ref={videoRef} src={api.video(clip)} controls muted playsInline
-                 onTimeUpdate={(e) => setNow(e.currentTarget.currentTime)} onLoadedMetadata={onVideoReady} />
-          <canvas ref={canvasRef} />
-          {active && (
-            <div className={"callout " + active.severity}>
-              <b>{LABEL[active.type]}</b> · {(active.t_end - active.t_start).toFixed(1)}s
-              <div>{active.note}</div>
-            </div>
-          )}
-          {safetyAlert && (
-            <div className="safety-flash" role="alert">
-              <b>⚠ Unsafe reach risk</b>
-              <div>{Math.round(safetyAlert.probability_next_window * 100)}% chance in the next {safetyAlert.window_s}s</div>
-            </div>
-          )}
-        </div>
-        <div className="row between">
-          <label className="toggle"><input type="checkbox" checked={overlay} onChange={(e) => setOverlay(e.target.checked)} /> Show hand tracking</label>
-          <div className="kpis">
-            {Object.entries(totals).map(([k, v]) => (
-              <span key={k} className="kpi"><i style={{ background: COLOR[k] }} />{LABEL[k]} <b>{Math.round((100 * v) / timeline.duration_s)}%</b></span>
-            ))}
+    <div className="watch">
+      <div className="watch-top">
+        <section className="watch-video">
+          <div className={"player" + (safetyAlert ? " safety-alert" : "")}>
+            <video ref={videoRef} src={api.video(clip)} controls muted playsInline
+                   onTimeUpdate={(e) => setNow(e.currentTarget.currentTime)} onLoadedMetadata={onVideoReady} />
+            <canvas ref={canvasRef} />
+            {active && (
+              <div className={"callout " + active.severity}>
+                <b>{LABEL[active.type]}</b> · {(active.t_end - active.t_start).toFixed(1)}s
+                <div>{active.note}</div>
+              </div>
+            )}
+            {safetyAlert && (
+              <div className="safety-flash" role="alert">
+                <b>⚠ Unsafe reach risk</b>
+                <div>{Math.round(safetyAlert.probability_next_window * 100)}% chance in the next {safetyAlert.window_s}s</div>
+              </div>
+            )}
           </div>
-        </div>
-        <FrictionTimeline timeline={timeline} now={now} onSeek={(t) => seek(clip, t)} />
-      </section>
+          <div className="row between watch-bar">
+            <label className="toggle"><input type="checkbox" checked={overlay} onChange={(e) => setOverlay(e.target.checked)} /> Show hand tracking</label>
+            <div className="kpis">
+              {Object.entries(totals).map(([k, v]) => (
+                <span key={k} className="kpi"><i style={{ background: COLOR[k] }} />{LABEL[k]} <b>{Math.round((100 * v) / timeline.duration_s)}%</b></span>
+              ))}
+            </div>
+          </div>
+        </section>
 
-      <section className="right">
         <div className="panel events">
           <div className="panel-h">
             <h3>Moments <span className="muted">({friction.length})</span></h3>
@@ -333,11 +332,19 @@ export default function Analyze({ clip, timeline, videoRef, onVideoReady, seek, 
             {!shown.length && <div className="muted pad">Nothing here.</div>}
           </div>
         </div>
+      </div>
+
+      <FrictionTimeline timeline={timeline} now={now} onSeek={(t) => seek(clip, t)} />
+
+      <div className="watch-mid">
         <Hand3D clip={clip} videoRef={videoRef} />
         <Attention clip={clip} />
         <DigitalTwin clip={clip} seek={seek} />
+      </div>
+
+      <div className="watch-copilot">
         <Copilot clips={clips} seek={seek} />
-      </section>
+      </div>
     </div>
   );
 }
