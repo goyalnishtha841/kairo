@@ -47,6 +47,55 @@ function useHandOverlay(clip, videoRef, canvasRef, enabled) {
   }, [track, enabled, videoRef, canvasRef]);
 }
 
+// Live safety alert: predicted (not just detected) risk, surfaced the moment playback reaches a
+// forecasted unsafe-reach timestamp (events/safety.py), with a visible flash and an audible beep --
+// the predictive, felt version of the static Safety panel in Fixes & safety.
+function useSafetyAlert(clip, now) {
+  const [forecasts, setForecasts] = useState([]);
+  const [active, setActive] = useState(null);
+  const firedRef = useRef(new Set());
+  const audioCtxRef = useRef(null);
+
+  useEffect(() => {
+    setForecasts([]);
+    setActive(null);
+    firedRef.current = new Set();
+    api.safety(clip).then((r) => setForecasts(r.configured ? r.forecasts : [])).catch(() => {});
+  }, [clip]);
+
+  const beep = () => {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      const ctx = audioCtxRef.current || (audioCtxRef.current = new Ctx());
+      const t0 = ctx.currentTime;
+      for (let i = 0; i < 2; i++) {
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.type = "square"; osc.frequency.value = 880;
+        const s = t0 + i * 0.26;
+        gain.gain.setValueAtTime(0.0001, s);
+        gain.gain.exponentialRampToValueAtTime(0.22, s + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, s + 0.18);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(s); osc.stop(s + 0.2);
+      }
+    } catch { /* audio isn't available (autoplay policy, no AudioContext) -- the visual flash still shows */ }
+  };
+
+  useEffect(() => {
+    const ALERT_WINDOW_S = 1.2;
+    const hit = forecasts.find((f) => now >= f.t && now < f.t + ALERT_WINDOW_S);
+    if (hit && !firedRef.current.has(hit.t)) {
+      firedRef.current.add(hit.t);
+      setActive(hit);
+      beep();
+      setTimeout(() => setActive((a) => (a === hit ? null : a)), 3500);
+    }
+    for (const t of firedRef.current) if (t > now + 2) firedRef.current.delete(t); // allow re-trigger on seek-back
+  }, [now, forecasts]);
+
+  return active;
+}
+
 function FrictionTimeline({ timeline, now, onSeek }) {
   const D = timeline.duration_s || 1;
   const friction = timeline.events.filter((e) => e.severity !== "green");
@@ -160,11 +209,12 @@ export default function Analyze({ clip, timeline, videoRef, onVideoReady, seek, 
     return t;
   }, [timeline]);
   const active = friction.find((e) => now >= e.t_start && now <= e.t_end);
+  const safetyAlert = useSafetyAlert(clip, now);
 
   return (
     <div className="analyze">
       <section className="left">
-        <div className="player">
+        <div className={"player" + (safetyAlert ? " safety-alert" : "")}>
           <video ref={videoRef} src={api.video(clip)} controls muted playsInline
                  onTimeUpdate={(e) => setNow(e.currentTarget.currentTime)} onLoadedMetadata={onVideoReady} />
           <canvas ref={canvasRef} />
@@ -172,6 +222,12 @@ export default function Analyze({ clip, timeline, videoRef, onVideoReady, seek, 
             <div className={"callout " + active.severity}>
               <b>{LABEL[active.type]}</b> · {(active.t_end - active.t_start).toFixed(1)}s
               <div>{active.note}</div>
+            </div>
+          )}
+          {safetyAlert && (
+            <div className="safety-flash" role="alert">
+              <b>⚠ Unsafe reach risk</b>
+              <div>{Math.round(safetyAlert.probability_next_window * 100)}% chance in the next {safetyAlert.window_s}s</div>
             </div>
           )}
         </div>
